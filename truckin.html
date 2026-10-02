@@ -1,0 +1,190 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#d6002f">
+<title>Đăng tài xe – Viettel Post TTC</title>
+<link rel="icon" type="image/png" href="logo-vttc.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" integrity="sha384-sRIl4kxILFvY47J16cr9ZwB07vP4J8+LH7qKQnuqkuIAvNWLzeN8tE5YBujZqJLB" crossorigin="anonymous">
+<link rel="stylesheet" href="truckin.css">
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none" aria-hidden="true"><symbol id="i-truck" viewBox="0 0 16 16"><path d="M0 3.5A1.5 1.5 0 0 1 1.5 2h9A1.5 1.5 0 0 1 12 3.5V5h1.02a1.5 1.5 0 0 1 1.17.563l1.481 1.85a1.5 1.5 0 0 1 .329.938V10.5a1.5 1.5 0 0 1-1.5 1.5H14a2 2 0 1 1-4 0H5a2 2 0 1 1-3.998-.085A1.5 1.5 0 0 1 0 10.5zm1.294 7.456A2 2 0 0 1 4.732 11h5.536a2 2 0 0 1 .732-.732V3.5a.5.5 0 0 0-.5-.5h-9a.5.5 0 0 0-.5.5v7a.5.5 0 0 0 .294.456M12 10a2 2 0 0 1 1.732 1h.768a.5.5 0 0 0 .5-.5V8.35a.5.5 0 0 0-.11-.312l-1.48-1.85A.5.5 0 0 0 13.02 6H12zm-9 1a1 1 0 1 0 0 2 1 1 0 0 0 0-2m9 0a1 1 0 1 0 0 2 1 1 0 0 0 0-2"/></symbol><symbol id="i-shield" viewBox="0 0 16 16"><path d="M5.338 1.59a61 61 0 0 0-2.837.856.48.48 0 0 0-.328.39c-.554 4.157.726 7.19 2.253 9.188a10.7 10.7 0 0 0 2.287 2.233c.346.244.652.42.893.533q.18.085.293.118a1 1 0 0 0 .101.025 1 1 0 0 0 .1-.025q.114-.034.294-.118c.24-.113.547-.29.893-.533a10.7 10.7 0 0 0 2.287-2.233c1.527-1.997 2.807-5.031 2.253-9.188a.48.48 0 0 0-.328-.39c-.651-.213-1.75-.56-2.837-.855C9.552 1.29 8.531 1.067 8 1.067c-.53 0-1.552.223-2.662.524zM5.072.56C6.157.265 7.31 0 8 0s1.843.265 2.928.56c1.11.3 2.229.655 2.887.87a1.54 1.54 0 0 1 1.044 1.262c.596 4.477-.787 7.795-2.465 9.99a11.8 11.8 0 0 1-2.517 2.453 7 7 0 0 1-1.048.625c-.28.132-.581.24-.829.24s-.548-.108-.829-.24a7 7 0 0 1-1.048-.625 11.8 11.8 0 0 1-2.517-2.453C1.928 10.487.545 7.169 1.141 2.692A1.54 1.54 0 0 1 2.185 1.43 63 63 0 0 1 5.072.56"/>
+  <path d="M10.854 5.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 7.793l2.646-2.647a.5.5 0 0 1 .708 0"/></symbol><symbol id="i-check" viewBox="0 0 16 16"><path d="M13.854 3.646a.5.5 0 0 1 0 .708l-7 7a.5.5 0 0 1-.708 0l-3.5-3.5a.5.5 0 1 1 .708-.708L6.5 10.293l6.646-6.647a.5.5 0 0 1 .708 0"/></symbol><symbol id="i-check-fill" viewBox="0 0 16 16"><path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01 1.05L7.88 12.01a.733.733 0 0 1-1.065.02L3.217 8.384a.757.757 0 0 1 0-1.06.733.733 0 0 1 1.047 0l3.052 3.093 5.4-6.425z"/></symbol><symbol id="i-clock" viewBox="0 0 16 16"><path d="M8.515 1.019A7 7 0 0 0 8 1V0a8 8 0 0 1 .589.022zm2.004.45a7 7 0 0 0-.985-.299l.219-.976q.576.129 1.126.342zm1.37.71a7 7 0 0 0-.439-.27l.493-.87a8 8 0 0 1 .979.654l-.615.789a7 7 0 0 0-.418-.302zm1.834 1.79a7 7 0 0 0-.653-.796l.724-.69q.406.429.747.91zm.744 1.352a7 7 0 0 0-.214-.468l.893-.45a8 8 0 0 1 .45 1.088l-.95.313a7 7 0 0 0-.179-.483m.53 2.507a7 7 0 0 0-.1-1.025l.985-.17q.1.58.116 1.17zm-.131 1.538q.05-.254.081-.51l.993.123a8 8 0 0 1-.23 1.155l-.964-.267q.069-.247.12-.501m-.952 2.379q.276-.436.486-.908l.914.405q-.24.54-.555 1.038zm-.964 1.205q.183-.183.35-.378l.758.653a8 8 0 0 1-.401.432z"/>
+  <path d="M8 1a7 7 0 1 0 4.95 11.95l.707.707A8.001 8.001 0 1 1 8 0z"/>
+  <path d="M7.5 3a.5.5 0 0 1 .5.5v5.21l3.248 1.856a.5.5 0 0 1-.496.868l-3.5-2A.5.5 0 0 1 7 9V3.5a.5.5 0 0 1 .5-.5"/></symbol><symbol id="i-send" viewBox="0 0 16 16"><path d="M15.964.686a.5.5 0 0 0-.65-.65L.767 5.855H.766l-.452.18a.5.5 0 0 0-.082.887l.41.26.001.002 4.995 3.178 3.178 4.995.002.002.26.41a.5.5 0 0 0 .886-.083zm-1.833 1.89L6.637 10.07l-.215-.338a.5.5 0 0 0-.154-.154l-.338-.215 7.494-7.494 1.178-.471z"/></symbol><symbol id="i-warn" viewBox="0 0 16 16"><path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/></symbol><symbol id="i-repeat" viewBox="0 0 16 16"><path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41m-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9"/>
+  <path fill-rule="evenodd" d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5 5 0 0 0 8 3M3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9z"/></symbol><symbol id="i-clipboard" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M10.854 7.146a.5.5 0 0 1 0 .708l-3 3a.5.5 0 0 1-.708 0l-1.5-1.5a.5.5 0 1 1 .708-.708L7.5 9.793l2.646-2.647a.5.5 0 0 1 .708 0"/>
+  <path d="M4 1.5H3a2 2 0 0 0-2 2V14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V3.5a2 2 0 0 0-2-2h-1v1h1a1 1 0 0 1 1 1V14a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V3.5a1 1 0 0 1 1-1h1z"/>
+  <path d="M9.5 1a.5.5 0 0 1 .5.5v1a.5.5 0 0 1-.5.5h-3a.5.5 0 0 1-.5-.5v-1a.5.5 0 0 1 .5-.5zm-3-1A1.5 1.5 0 0 0 5 1.5v1A1.5 1.5 0 0 0 6.5 4h3A1.5 1.5 0 0 0 11 2.5v-1A1.5 1.5 0 0 0 9.5 0z"/></symbol><symbol id="i-pencil" viewBox="0 0 16 16"><path d="M15.502 1.94a.5.5 0 0 1 0 .706L14.459 3.69l-2-2L13.502.646a.5.5 0 0 1 .707 0l1.293 1.293zm-1.75 2.456-2-2L4.939 9.21a.5.5 0 0 0-.121.196l-.805 2.414a.25.25 0 0 0 .316.316l2.414-.805a.5.5 0 0 0 .196-.12l6.813-6.814z"/>
+  <path fill-rule="evenodd" d="M1 13.5A1.5 1.5 0 0 0 2.5 15h11a1.5 1.5 0 0 0 1.5-1.5v-6a.5.5 0 0 0-1 0v6a.5.5 0 0 1-.5.5h-11a.5.5 0 0 1-.5-.5v-11a.5.5 0 0 1 .5-.5H9a.5.5 0 0 0 0-1H2.5A1.5 1.5 0 0 0 1 2.5z"/></symbol></svg>
+
+<header class="app-head">
+  <div class="container-xxl d-flex align-items-center gap-3">
+    <div class="brand-mark"><img src="logo-vttc.png" alt="VTTC Logistics"></div>
+    <div class="flex-grow-1 min-w-0">
+      <div class="company">Công ty TNHH TMDV và Kho Vận Viettel Post - TTC</div>
+      <h1>Đăng tài xe vào kho</h1>
+    </div>
+    <div class="text-end">
+      <div class="clock-time mono" id="clockTime">--:--</div>
+      <div class="clock-date d-none d-sm-block" id="clockDate"></div>
+    </div>
+  </div>
+</header>
+
+<main class="container-xxl app-main" id="mainView">
+  <div class="row g-4">
+    <div class="col-lg-7 col-xl-8">
+      <div class="note mb-3">
+        <svg class="ico"><use href="#i-shield"/></svg>
+        <div>Tất cả thông tin đều <strong>bắt buộc</strong>. Kiểm tra kỹ biển số và số SO-ST trước khi gửi. Ngày và giờ truck-in được ghi tự động lúc bấm Gửi.</div>
+      </div>
+
+      <form id="regForm" novalidate class="d-grid gap-3">
+        <!-- 1 -->
+        <section class="form-section" data-fields="bienSo,taiXe,nhaVanTai" aria-labelledby="s1">
+          <div class="sec-head">
+            <div class="sec-no"><span>1</span><svg class="ico"><use href="#i-check"/></svg></div>
+            <div><h2 id="s1">Xe &amp; tài xế</h2><p>Biển số, người lái và đơn vị vận tải</p></div>
+          </div>
+          <div class="row g-3">
+            <div class="col-md-6" data-field="bienSo">
+              <label class="form-label" for="bienSo">Biển số xe<span class="req">*</span></label>
+              <input type="text" class="form-control plate-input" id="bienSo" name="bienSo" placeholder="51D-119.32" maxlength="12" autocomplete="off" autocapitalize="characters" spellcheck="false">
+              <div class="field-error" data-err></div>
+            </div>
+            <div class="col-md-6" data-field="taiXe">
+              <label class="form-label" for="taiXe">Tên tài xế<span class="req">*</span></label>
+              <input type="text" class="form-control" id="taiXe" name="taiXe" placeholder="Nguyễn Văn An" autocomplete="name" maxlength="60">
+              <div class="form-text">Ghi đầy đủ họ và tên.</div>
+              <div class="field-error" data-err></div>
+            </div>
+            <div class="col-12" data-field="nhaVanTai">
+              <fieldset>
+                <legend class="form-label">Nhà vận tải<span class="req">*</span></legend>
+                <div class="choice-group choice-5">
+                  <input type="radio" class="btn-check" name="nhaVanTai" id="nvt1" value="ADV"><label class="choice" for="nvt1">ADV<svg class="ico tick"><use href="#i-check"/></svg></label>
+                  <input type="radio" class="btn-check" name="nhaVanTai" id="nvt2" value="BV"><label class="choice" for="nvt2">BV<svg class="ico tick"><use href="#i-check"/></svg></label>
+                  <input type="radio" class="btn-check" name="nhaVanTai" id="nvt3" value="TAP"><label class="choice" for="nvt3">TAP<svg class="ico tick"><use href="#i-check"/></svg></label>
+                  <input type="radio" class="btn-check" name="nhaVanTai" id="nvt4" value="TĐ"><label class="choice" for="nvt4">TĐ<svg class="ico tick"><use href="#i-check"/></svg></label>
+                  <input type="radio" class="btn-check" name="nhaVanTai" id="nvt5" value="Vitra"><label class="choice" for="nvt5">Vitra<svg class="ico tick"><use href="#i-check"/></svg></label>
+                </div>
+              </fieldset>
+              <div class="field-error" data-err></div>
+            </div>
+          </div>
+        </section>
+
+        <!-- 2 -->
+        <section class="form-section" data-fields="loaiDon,soSO" aria-labelledby="s2">
+          <div class="sec-head">
+            <div class="sec-no"><span>2</span><svg class="ico"><use href="#i-check"/></svg></div>
+            <div><h2 id="s2">Đơn hàng</h2><p>Loại đơn và số chứng từ SO-ST</p></div>
+          </div>
+          <div class="row g-3">
+            <div class="col-12" data-field="loaiDon">
+              <fieldset>
+                <legend class="form-label">Loại đơn hàng<span class="req">*</span></legend>
+                <div class="choice-group choice-orders">
+                  <input type="radio" class="btn-check" name="loaiDon" id="ld1" value="Đại lý, NPP (SO)"><label class="choice" for="ld1">Đại lý, NPP (SO)<svg class="ico tick"><use href="#i-check"/></svg></label>
+                  <input type="radio" class="btn-check" name="loaiDon" id="ld2" value="2.3T"><label class="choice" for="ld2">2.3T<svg class="ico tick"><use href="#i-check"/></svg></label>
+                  <input type="radio" class="btn-check" name="loaiDon" id="ld3" value="RPM - SO"><label class="choice" for="ld3">RPM - SO<svg class="ico tick"><use href="#i-check"/></svg></label>
+                  <input type="radio" class="btn-check" name="loaiDon" id="ld4" value="RPM - ST"><label class="choice" for="ld4">RPM - ST<svg class="ico tick"><use href="#i-check"/></svg></label>
+                  <input type="radio" class="btn-check" name="loaiDon" id="ld5" value="OT - ST"><label class="choice" for="ld5">OT - ST<svg class="ico tick"><use href="#i-check"/></svg></label>
+                  <input type="radio" class="btn-check" name="loaiDon" id="ld6" value="Chuyển kho (ST)"><label class="choice" for="ld6">Chuyển kho (ST)<svg class="ico tick"><use href="#i-check"/></svg></label>
+                  <input type="radio" class="btn-check" name="loaiDon" id="ld7" value="Nhập nước (OT)"><label class="choice" for="ld7">Nhập nước (OT)<svg class="ico tick"><use href="#i-check"/></svg></label>
+                  <input type="radio" class="btn-check" name="loaiDon" id="ld8" value="Trả vỏ RPM"><label class="choice" for="ld8">Trả vỏ RPM<svg class="ico tick"><use href="#i-check"/></svg></label>
+                </div>
+              </fieldset>
+              <div class="field-error" data-err></div>
+            </div>
+            <div class="col-12" data-field="soSO">
+              <label class="form-label" for="soSO">Số SO-ST<span class="req">*</span></label>
+              <input type="text" class="form-control mono" id="soSO" name="soSO" inputmode="numeric" placeholder="62133870" maxlength="10" autocomplete="off">
+              <div class="form-text">8 đến 10 chữ số, xem trên chứng từ giao hàng.</div>
+              <div class="field-error" data-err></div>
+            </div>
+          </div>
+        </section>
+      </form>
+    </div>
+
+    <div class="col-lg-5 col-xl-4 d-none d-lg-block">
+      <aside class="ticket ticket-sticky" aria-label="Phiếu đăng tài">
+        <div class="ticket-head">
+          <div><div class="t-title">Phiếu đăng tài</div><div class="t-sub">Cập nhật khi bạn điền</div></div>
+          <span class="prog-badge" data-prog-text>0/5</span>
+        </div>
+        <div class="px-4"><div class="progress" role="progressbar" aria-label="Tiến độ điền form"><div class="progress-bar" data-prog-bar style="width:0%"></div></div></div>
+        <div class="plate-view"><span id="sumPlate">— — —</span></div>
+        <div class="perf"><i></i></div>
+        <dl class="t-rows" id="sumRows"></dl>
+        <div class="t-foot">
+          <button type="submit" form="regForm" class="btn btn-brand btn-lg w-100 d-inline-flex justify-content-center align-items-center gap-2"><svg class="ico"><use href="#i-send"/></svg>Gửi đăng tài</button>
+          <div class="d-hint small text-center mt-2" id="deskHint">Điền đủ 5 thông tin để gửi</div>
+        </div>
+      </aside>
+    </div>
+  </div>
+  <p class="app-foot text-center mt-4 mb-0">© Công ty TNHH TMDV và Kho Vận Viettel Post - TTC · Thông tin chỉ dùng để quản lý xe ra vào kho.</p>
+</main>
+
+<div class="mobile-bar d-lg-none" id="mobileBar">
+  <div class="d-flex align-items-center gap-3">
+    <div class="flex-grow-1 min-w-0">
+      <div class="hint mb-1" id="mProg"><span class="mono fw-bold" data-prog-text>0/5</span> thông tin đã điền</div>
+      <div class="hint warn mb-1" id="mWarn" hidden></div>
+      <div class="progress"><div class="progress-bar" data-prog-bar style="width:0%"></div></div>
+    </div>
+    <button type="submit" form="regForm" class="btn btn-brand btn-lg d-inline-flex align-items-center gap-2 flex-none"><svg class="ico"><use href="#i-send"/></svg>Gửi</button>
+  </div>
+</div>
+
+<section class="container-xxl app-main" id="successView" hidden>
+  <div class="success-wrap text-center">
+    <div class="success-icon"><svg class="ico"><use href="#i-check-fill"/></svg></div>
+    <h2 class="fw-bold mb-1" style="font-size:1.5rem">Đăng tài thành công</h2>
+    <p class="mb-3" style="color:var(--muted)">Đưa màn hình này cho bảo vệ để đối chiếu.</p>
+    <div class="mb-3" id="demoFlag" hidden><span class="demo-flag"><svg class="ico"><use href="#i-warn"/></svg>Bản xem thử: dữ liệu chưa được gửi đi</span></div>
+    <div class="ticket text-start mb-3">
+      <div class="ticket-head">
+        <div><div class="t-sub">Mã đăng tài</div><div class="ref-code" id="refCode">—</div></div>
+        <span class="prog-badge" id="okTime">--:--</span>
+      </div>
+      <div class="plate-view"><span id="okPlate">—</span></div>
+      <div class="perf"><i></i></div>
+      <dl class="t-rows pb-4" id="okRows"></dl>
+    </div>
+    <button type="button" class="btn btn-brand btn-lg w-100 d-inline-flex justify-content-center align-items-center gap-2" id="newBtn"><svg class="ico"><use href="#i-repeat"/></svg>Đăng tài xe khác</button>
+  </div>
+</section>
+
+<div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirmTitle" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-fullscreen-sm-down">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title fs-5 fw-bold d-flex align-items-center gap-2" id="confirmTitle"><svg class="ico"><use href="#i-clipboard"/></svg>Kiểm tra lại thông tin</h2>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+      </div>
+      <div class="modal-body">
+        <div class="plate-view mt-0 mb-3"><span id="cfPlate">—</span></div>
+        <dl class="confirm-rows" id="cfRows"></dl>
+        <div class="field-error mt-3" id="sendError"></div>
+      </div>
+      <div class="modal-footer flex-nowrap">
+        <button type="button" class="btn btn-now btn-lg flex-fill justify-content-center" data-bs-dismiss="modal"><svg class="ico"><use href="#i-pencil"/></svg>Sửa lại</button>
+        <button type="button" class="btn btn-brand btn-lg flex-fill d-inline-flex justify-content-center align-items-center gap-2" id="confirmSend"><svg class="ico"><use href="#i-send"/></svg>Xác nhận gửi</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js" integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI" crossorigin="anonymous"></script>
+<script src="truckin.js"></script>
+
+</body>
+</html>
