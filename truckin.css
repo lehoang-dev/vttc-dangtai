@@ -93,7 +93,11 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);-webkit-font
 
 /* Choice chips / cards (radio) */
 .choice-group{display:grid;gap:.5rem}
-.choice-5{grid-template-columns:repeat(5,minmax(0,1fr))}
+/* Carriers: 6 chips — 3×2 when narrow, one row of 6 once the field is wide enough for "Châu Hà" (container query,
+   so it follows the field's real width: the column is narrower at lg than at md). No support → stays 3×2. */
+.carrier-field{container-type:inline-size}
+.choice-carriers{grid-template-columns:repeat(3,minmax(0,1fr))}
+@container (min-width:36rem){.choice-carriers{grid-template-columns:repeat(6,minmax(0,1fr))}}
 .choice-orders{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media (min-width:768px){.choice-orders{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .choice{display:flex;align-items:center;justify-content:center;gap:.4rem;min-height:52px;padding:.5rem .6rem;border:1.5px solid var(--line);border-radius:.75rem;
@@ -103,7 +107,8 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);-webkit-font
 .choice .tick{display:none;position:absolute;top:.35rem;right:.4rem;font-size:.8rem;color:var(--brand)}
 .btn-check:checked + .choice{border-color:var(--brand);background:var(--brand-soft);box-shadow:inset 0 0 0 1px var(--brand)}
 .btn-check:checked + .choice .tick{display:block}
-.choice-5 .choice .tick{display:none!important}
+.choice-carriers .choice{padding-inline:.25rem;white-space:nowrap}
+.choice-carriers .choice .tick{display:none!important}
 .btn-check:focus-visible + .choice{outline:2px solid var(--brand);outline-offset:2px}
 .choice-orders .choice{min-height:60px;font-size:.9rem;padding-inline:.75rem}
 .is-invalid-group .choice{border-color:var(--danger)}
