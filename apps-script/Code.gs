@@ -1,10 +1,11 @@
 const SHEET_NAME = 'DangTai';   // tên tab trong Google Sheet
 const KEY_COL = 'Biển số xe';   // cột dùng để tìm dòng trống tiếp theo
-const STT_COL = 'STT2';         // số thứ tự trong ca: script tự ghi, mỗi ca (8 tiếng) bắt đầu lại từ 1
+const STT_COL = 'STT2';         // số thứ tự trong ca: do công thức mảng ở ô tiêu đề tính (xem caiCongThucSTT)
 // Script tìm cột theo tên ở dòng 1 và chỉ ghi vào các cột dữ liệu.
+// KHÔNG ghi vào cột STT2: một ô có giá trị trong vùng công thức mảng làm cả cột thành #REF!.
 
 // Tên cột ở dòng 1 mà script ghi vào. Thiếu cột nào thì báo lỗi TRƯỚC khi ghi, không để lại dòng ghi dở.
-const COLS = ['Ca', 'Ngày theo ca', STT_COL, 'Biển số xe', 'Tên tài xế', 'Số điện thoại', 'Giờ vào bãi',
+const COLS = ['Ca', 'Ngày theo ca', 'Biển số xe', 'Tên tài xế', 'Số điện thoại', 'Giờ vào bãi',
               'Nhà vận tải RPM & FG', 'Loại đơn hàng RPM & FG', 'Số SO-ST'];
 
 function doPost(e) {
@@ -21,14 +22,10 @@ function doPost(e) {
       return i + 1;
     };
     COLS.forEach(col); // kiểm tra đủ cột trước khi ghi
-    // ARRAYFORMULA ở dòng 2 sẽ báo lỗi #REF! khi script ghi số vào cột STT2 → dừng lại, không ghi gì
-    if (/ARRAYFORMULA/i.test(sh.getRange(2, col(STT_COL)).getFormula()))
-      throw new Error('Cột "' + STT_COL + '" đang có ARRAYFORMULA ở dòng 2. Xoá công thức này, script sẽ tự ghi số thứ tự.');
 
     const shift = shiftOf_(d.ngay, d.gioTruckIn);
     const tz = sh.getParent().getSpreadsheetTimeZone();
     const r = nextRow_(sh, col(KEY_COL));
-    const stt = sttOf_(sh, r, col('Ca'), col('Ngày theo ca'), shift, tz);
     const put = (name, value, format) => {
       const cell = sh.getRange(r, col(name));
       if (format) cell.setNumberFormat(format);
@@ -38,7 +35,6 @@ function doPost(e) {
     put('Ca', shift.ca);
     // Tạo ngày theo múi giờ của Sheet để không bị lệch 1 ngày
     put('Ngày theo ca', Utilities.parseDate(shift.ngay, tz, 'yyyy-MM-dd'), 'dd/mm/yyyy');
-    put(STT_COL, stt);
     put('Biển số xe', d.bienSo);
     put('Tên tài xế', d.taiXe);
     put('Số điện thoại', String(d.soDienThoai || ''), '@'); // định dạng chữ, giữ số 0 ở đầu
@@ -47,7 +43,7 @@ function doPost(e) {
     put('Loại đơn hàng RPM & FG', d.loaiDon);
     put('Số SO-ST', String(d.soSO), '@'); // định dạng chữ, giữ nguyên số 0 ở đầu
 
-    return ContentService.createTextOutput('ok ' + shift.ca + ' ' + shift.ngay + ' STT ' + stt);
+    return ContentService.createTextOutput('ok ' + shift.ca + ' ' + shift.ngay + ' dòng ' + r);
   } catch (err) {
     console.error(err); // xem lỗi trong mục Thực thi (Executions)
     return ContentService.createTextOutput('error: ' + err);
@@ -71,7 +67,7 @@ function headers_(sh) {
   return sh.getRange(1, 1, 1, sh.getLastColumn()).getDisplayValues()[0].map(h => String(h).trim());
 }
 
-// Dòng trống đầu tiên sau dòng cuối có biển số (bỏ qua các dòng chỉ có công thức STT2)
+// Dòng trống đầu tiên sau dòng cuối có biển số (bỏ qua các dòng chỉ có kết quả rỗng của công thức STT2)
 function nextRow_(sh, keyCol) {
   const last = sh.getLastRow();
   if (last < 2) return 2;
@@ -97,26 +93,45 @@ function shiftOf_(ngay, gio) {
   return { ca: ca, ngay: Utilities.formatDate(date, 'UTC', 'yyyy-MM-dd') };
 }
 
-// Số thứ tự trong ca = số dòng đã có cùng Ca + cùng Ngày theo ca, cộng 1.
-// Chỉ xét 1000 dòng gần nhất (một ca không thể nhiều hơn) để sheet lớn vẫn chạy nhanh.
-function sttOf_(sh, r, caCol, ngayCol, shift, tz) {
-  const from = Math.max(2, r - 1000);
-  const n = r - from;
-  if (n <= 0) return 1;
-  const cas = sh.getRange(from, caCol, n, 1).getValues();
-  const ngays = sh.getRange(from, ngayCol, n, 1).getValues();
-  const key = v => v instanceof Date ? Utilities.formatDate(v, tz, 'yyyy-MM-dd') : String(v).trim();
-  let count = 0;
-  for (let i = 0; i < n; i++) {
-    if (String(cas[i][0]).trim() === shift.ca && key(ngays[i][0]) === shift.ngay) count++;
-  }
-  return count + 1;
+// Chạy 1 lần trong trình soạn thảo: đặt công thức STT2 ở ô tiêu đề.
+// STT = số dòng từ đầu bảng tới dòng này có cùng Ca + cùng Ngày theo ca → mỗi ca (8 tiếng) bắt đầu lại từ 1.
+// Xoá giá trị đang nằm trong cột (chặn công thức mảng → #REF!). setFormula dùng cú pháp tiếng Anh (dấu phẩy)
+// nên không phụ thuộc cài đặt ngôn ngữ của Sheet.
+function caiCongThucSTT() {
+  const sh = getSheet_();
+  const head = headers_(sh);
+  let c = head.indexOf(STT_COL);
+  if (c < 0) c = head.indexOf('#REF!'); // tiêu đề đang lỗi vì công thức bị chặn
+  if (c < 0) throw new Error('Không thấy cột "' + STT_COL + '" (hoặc ô #REF!) ở dòng 1');
+  const L = name => {
+    const i = head.indexOf(name);
+    if (i < 0) throw new Error('Không tìm thấy cột "' + name + '" ở dòng 1');
+    return colLetter_(i + 1);
+  };
+  const ca = L('Ca'), ngay = L('Ngày theo ca'), bs = L(KEY_COL);
+  sh.getRange(2, c + 1, sh.getMaxRows() - 1, 1).clearContent();
+  sh.getRange(1, c + 1).setFormula(
+    '={"' + STT_COL + '"; ARRAYFORMULA(IF(' + bs + '2:' + bs + '="", "", COUNTIFS('
+    + ca + '2:' + ca + ', ' + ca + '2:' + ca + ', ' + ngay + '2:' + ngay + ', ' + ngay + '2:' + ngay + ', '
+    + 'ROW(' + bs + '2:' + bs + '), "<="&ROW(' + bs + '2:' + bs + '))))}');
+  SpreadsheetApp.flush();
+  Logger.log('Đã đặt công thức ở ô ' + colLetter_(c + 1) + '1: ' + sh.getRange(1, c + 1).getFormula());
+}
+
+function colLetter_(n) {
+  let s = '';
+  for (; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + (n - 1) % 26) + s;
+  return s;
 }
 
 // Thử chia ca + số thứ tự bằng giờ giả. Chạy trong trình soạn thảo, không qua Web App.
 // Dùng năm 2000 để không lẫn với xe thật trong ca hiện tại. Tự xoá dòng thử cũ trước khi chạy.
+// STT đọc lại từ chính cột STT2 sau khi công thức tính xong, nên kiểm tra được cả công thức.
 function testShifts() {
   xoaTest();
+  const sh = getSheet_();
+  const sttCol = headers_(sh).indexOf(STT_COL) + 1;
+  if (!sttCol) throw new Error('Không thấy cột "' + STT_COL + '" ở dòng 1. Chạy caiCongThucSTT trước.');
   const cases = [  // ngày gửi, giờ vào bãi → ca, ngày theo ca, STT mong đợi
     ['2000-01-05', '06:10', 'Ca 1', '2000-01-05', 1],
     ['2000-01-05', '13:59', 'Ca 1', '2000-01-05', 2],
@@ -131,8 +146,12 @@ function testShifts() {
   let fail = 0;
   cases.forEach((c, i) => {
     const payload = { ngay: c[0], gioTruckIn: c[1], bienSo: 'TEST' + (i + 1), taiXe: 'Test', soDienThoai: '0912345678', nhaVanTai: 'ADV', loaiDon: '2.3T', soSO: '12345678' };
-    const got = doPost({ postData: { contents: JSON.stringify(payload) } }).getContent();
-    const want = 'ok ' + c[2] + ' ' + c[3] + ' STT ' + c[4];
+    const res = doPost({ postData: { contents: JSON.stringify(payload) } }).getContent();
+    const m = res.match(/^ok (.+) dòng (\d+)$/);
+    if (!m) { fail++; Logger.log('SAI   ' + c[0] + ' ' + c[1] + ' → ' + res); return; }
+    SpreadsheetApp.flush();
+    const got = m[1] + ' STT ' + sh.getRange(Number(m[2]), sttCol).getDisplayValue();
+    const want = c[2] + ' ' + c[3] + ' STT ' + c[4];
     if (got !== want) fail++;
     Logger.log((got === want ? 'ĐÚNG ' : 'SAI   ') + c[0] + ' ' + c[1] + ' → ' + got + (got === want ? '' : '  (mong đợi: ' + want + ')'));
   });
