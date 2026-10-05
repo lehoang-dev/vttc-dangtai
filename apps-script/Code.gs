@@ -1,8 +1,5 @@
-const SHEET_NAME = 'DangTai';   // tên tab trong Google Sheet
-const KEY_COL = 'Biển số xe';   // cột dùng để tìm dòng trống tiếp theo
-const STT_COL = 'STT2';         // số thứ tự trong ca: do công thức mảng ở ô tiêu đề tính (xem caiCongThucSTT)
-// Script tìm cột theo tên ở dòng 1 và chỉ ghi vào các cột dữ liệu.
-// KHÔNG ghi vào cột STT2: một ô có giá trị trong vùng công thức mảng làm cả cột thành #REF!.
+const SHEET_NAME = 'DangTai';  
+const KEY_COL = 'Biển số xe';   
 
 // Tên cột ở dòng 1 mà script ghi vào. Thiếu cột nào thì báo lỗi TRƯỚC khi ghi, không để lại dòng ghi dở.
 const COLS = ['Ca', 'Ngày theo ca', 'Biển số xe', 'Tên tài xế', 'Số điện thoại', 'Giờ vào bãi',
