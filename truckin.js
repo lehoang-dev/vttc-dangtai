@@ -3,7 +3,7 @@
   // ===== Cấu hình =====
   // Dán URL Web App (Google Apps Script) vào ENDPOINT để nhận dữ liệu vào Google Sheet.
   // Để trống = chế độ xem thử, form không gửi dữ liệu đi đâu.
-  const CONFIG = { ENDPOINT: 'https://script.google.com/macros/s/AKfycbwa0UJCgmv-ICGqribqfb5nylv5GY6ZYbw484NEflV6jvKvFRWZ2_JftvCuu1Rn0a2l/exec' };
+  const CONFIG = { ENDPOINT: 'https://script.google.com/macros/s/AKfycbz16gNy0npNtsdOjg3RgLHMS-qpgM_HMV3k8ochx2LEYZReuOWK2grpu4b9gIucAXYf/exec' };
 
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
