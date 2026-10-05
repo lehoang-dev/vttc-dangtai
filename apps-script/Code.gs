@@ -16,7 +16,8 @@ function doPost(e) {
     const head = headers_(sh);
     const col = name => {
       const i = head.indexOf(name);
-      if (i < 0) throw new Error('Không tìm thấy cột "' + name + '" ở dòng 1');
+      if (i < 0) throw new Error('Không tìm thấy cột "' + name + '" ở dòng 1, tab "' + SHEET_NAME + '", file "'
+        + sh.getParent().getName() + '". Dòng 1 đang có: ' + JSON.stringify(head.filter(String)));
       return i + 1;
     };
     COLS.forEach(col); // kiểm tra đủ cột trước khi ghi
