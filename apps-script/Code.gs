@@ -1,5 +1,5 @@
-const SHEET_NAME = 'DangTai';  
-const KEY_COL = 'Biển số xe';   
+const SHEET_NAME = 'DangTai';
+const KEY_COL = 'Biển số xe';
 
 // Tên cột ở dòng 1 mà script ghi vào. Thiếu cột nào thì báo lỗi TRƯỚC khi ghi, không để lại dòng ghi dở.
 const COLS = ['Ca', 'Ngày theo ca', 'Biển số xe', 'Tên tài xế', 'Số điện thoại', 'Giờ vào bãi',
@@ -90,45 +90,15 @@ function shiftOf_(ngay, gio) {
   return { ca: ca, ngay: Utilities.formatDate(date, 'UTC', 'yyyy-MM-dd') };
 }
 
-// Chạy 1 lần trong trình soạn thảo: đặt công thức STT2 ở ô tiêu đề.
-// STT = số dòng từ đầu bảng tới dòng này có cùng Ca + cùng Ngày theo ca → mỗi ca (8 tiếng) bắt đầu lại từ 1.
-// Xoá giá trị đang nằm trong cột (chặn công thức mảng → #REF!). setFormula dùng cú pháp tiếng Anh (dấu phẩy)
-// nên không phụ thuộc cài đặt ngôn ngữ của Sheet.
-function caiCongThucSTT() {
-  const sh = getSheet_();
-  const head = headers_(sh);
-  let c = head.indexOf(STT_COL);
-  if (c < 0) c = head.indexOf('#REF!'); // tiêu đề đang lỗi vì công thức bị chặn
-  if (c < 0) throw new Error('Không thấy cột "' + STT_COL + '" (hoặc ô #REF!) ở dòng 1');
-  const L = name => {
-    const i = head.indexOf(name);
-    if (i < 0) throw new Error('Không tìm thấy cột "' + name + '" ở dòng 1');
-    return colLetter_(i + 1);
-  };
-  const ca = L('Ca'), ngay = L('Ngày theo ca'), bs = L(KEY_COL);
-  sh.getRange(2, c + 1, sh.getMaxRows() - 1, 1).clearContent();
-  sh.getRange(1, c + 1).setFormula(
-    '={"' + STT_COL + '"; ARRAYFORMULA(IF(' + bs + '2:' + bs + '="", "", COUNTIFS('
-    + ca + '2:' + ca + ', ' + ca + '2:' + ca + ', ' + ngay + '2:' + ngay + ', ' + ngay + '2:' + ngay + ', '
-    + 'ROW(' + bs + '2:' + bs + '), "<="&ROW(' + bs + '2:' + bs + '))))}');
-  SpreadsheetApp.flush();
-  Logger.log('Đã đặt công thức ở ô ' + colLetter_(c + 1) + '1: ' + sh.getRange(1, c + 1).getFormula());
-}
-
-function colLetter_(n) {
-  let s = '';
-  for (; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + (n - 1) % 26) + s;
-  return s;
-}
-
 // Thử chia ca + số thứ tự bằng giờ giả. Chạy trong trình soạn thảo, không qua Web App.
 // Dùng năm 2000 để không lẫn với xe thật trong ca hiện tại. Tự xoá dòng thử cũ trước khi chạy.
 // STT đọc lại từ chính cột STT2 sau khi công thức tính xong, nên kiểm tra được cả công thức.
 function testShifts() {
   xoaTest();
   const sh = getSheet_();
-  const sttCol = headers_(sh).indexOf(STT_COL) + 1;
-  if (!sttCol) throw new Error('Không thấy cột "' + STT_COL + '" ở dòng 1. Chạy caiCongThucSTT trước.');
+  // STT2 do công thức ở A1 tự tính; script không ghi vào cột này (ghi vào sẽ làm cả cột #REF!)
+  const sttCol = headers_(sh).indexOf('STT2') + 1;
+  if (!sttCol) throw new Error('Không thấy cột "STT2" ở dòng 1. Nếu A1 đang #REF!: chọn A2 đến cuối cột, bấm Delete.');
   const cases = [  // ngày gửi, giờ vào bãi → ca, ngày theo ca, STT mong đợi
     ['2000-01-05', '06:10', 'Ca 1', '2000-01-05', 1],
     ['2000-01-05', '13:59', 'Ca 1', '2000-01-05', 2],
