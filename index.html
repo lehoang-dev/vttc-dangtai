@@ -46,10 +46,10 @@
 
       <form id="regForm" novalidate class="d-grid gap-3">
         <!-- 1 -->
-        <section class="form-section" data-fields="bienSo,taiXe,nhaVanTai" aria-labelledby="s1">
+        <section class="form-section" data-fields="bienSo,taiXe,soDienThoai,nhaVanTai" aria-labelledby="s1">
           <div class="sec-head">
             <div class="sec-no"><span>1</span><svg class="ico"><use href="#i-check"/></svg></div>
-            <div><h2 id="s1">Xe &amp; tài xế</h2><p>Biển số, người lái và đơn vị vận tải</p></div>
+            <div><h2 id="s1">Xe &amp; tài xế</h2><p>Biển số, người lái, số điện thoại và đơn vị vận tải</p></div>
           </div>
           <div class="row g-3">
             <div class="col-md-6" data-field="bienSo">
@@ -61,6 +61,12 @@
               <label class="form-label" for="taiXe">Tên tài xế<span class="req">*</span></label>
               <input type="text" class="form-control" id="taiXe" name="taiXe" placeholder="Nguyễn Văn An" autocomplete="name" maxlength="60">
               <div class="form-text">Ghi đầy đủ họ và tên.</div>
+              <div class="field-error" data-err></div>
+            </div>
+            <div class="col-12" data-field="soDienThoai">
+              <label class="form-label" for="soDienThoai">Số điện thoại tài xế<span class="req">*</span></label>
+              <input type="tel" class="form-control mono" id="soDienThoai" name="soDienThoai" inputmode="numeric" placeholder="0912345678" maxlength="14" autocomplete="tel">
+              <div class="form-text">10 chữ số, bắt đầu bằng số 0.</div>
               <div class="field-error" data-err></div>
             </div>
             <div class="col-12 carrier-field" data-field="nhaVanTai">
@@ -118,7 +124,7 @@
       <aside class="ticket ticket-sticky" aria-label="Phiếu đăng tài">
         <div class="ticket-head">
           <div><div class="t-title">Phiếu đăng tài</div><div class="t-sub">Cập nhật khi bạn điền</div></div>
-          <span class="prog-badge" data-prog-text>0/5</span>
+          <span class="prog-badge" data-prog-text>0/6</span>
         </div>
         <div class="px-4"><div class="progress" role="progressbar" aria-label="Tiến độ điền form"><div class="progress-bar" data-prog-bar style="width:0%"></div></div></div>
         <div class="plate-view"><span id="sumPlate">— — —</span></div>
@@ -126,7 +132,7 @@
         <dl class="t-rows" id="sumRows"></dl>
         <div class="t-foot">
           <button type="submit" form="regForm" class="btn btn-brand btn-lg w-100 d-inline-flex justify-content-center align-items-center gap-2"><svg class="ico"><use href="#i-send"/></svg>Gửi đăng tài</button>
-          <div class="d-hint small text-center mt-2" id="deskHint">Điền đủ 5 thông tin để gửi</div>
+          <div class="d-hint small text-center mt-2" id="deskHint">Điền đủ 6 thông tin để gửi</div>
         </div>
       </aside>
     </div>
@@ -137,7 +143,7 @@
 <div class="mobile-bar d-lg-none" id="mobileBar">
   <div class="d-flex align-items-center gap-3">
     <div class="flex-grow-1 min-w-0">
-      <div class="hint mb-1" id="mProg"><span class="mono fw-bold" data-prog-text>0/5</span> thông tin đã điền</div>
+      <div class="hint mb-1" id="mProg"><span class="mono fw-bold" data-prog-text>0/6</span> thông tin đã điền</div>
       <div class="hint warn mb-1" id="mWarn" hidden></div>
       <div class="progress"><div class="progress-bar" data-prog-bar style="width:0%"></div></div>
     </div>

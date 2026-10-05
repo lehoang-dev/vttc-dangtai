@@ -45,6 +45,7 @@
     { k: 'ngay', label: 'Ngày', auto: true },
     { k: 'bienSo', label: 'Biển số xe', empty: 'Vui lòng nhập biển số xe.' },
     { k: 'taiXe', label: 'Tên tài xế', empty: 'Vui lòng nhập tên tài xế.' },
+    { k: 'soDienThoai', label: 'Số điện thoại', empty: 'Vui lòng nhập số điện thoại tài xế.' },
     { k: 'gioTruckIn', label: 'Giờ truck-in', auto: true },
     { k: 'nhaVanTai', label: 'Nhà vận tải', radio: true, empty: 'Vui lòng chọn nhà vận tải.' },
     { k: 'loaiDon', label: 'Loại đơn hàng', radio: true, empty: 'Vui lòng chọn loại đơn hàng.' },
@@ -70,6 +71,7 @@
     if (!v) return F[k].empty;
     if (k === 'bienSo' && !PLATE_RE.test(v)) return 'Biển số chưa đúng dạng. Ví dụ: 50H12345 hoặc 51D-119.32';
     if (k === 'taiXe'){ if (/\d/.test(v)) return 'Tên tài xế không được chứa số.'; if (v.replace(/\s/g, '').length < 2) return 'Tên tài xế quá ngắn.'; }
+    if (k === 'soDienThoai'){ if (v[0] !== '0') return 'Số điện thoại phải bắt đầu bằng số 0.'; if (!/^0\d{9}$/.test(v)) return 'Số điện thoại gồm đúng 10 chữ số (đang có ' + v.length + ').'; }
     if (k === 'soSO' && !/^\d{8,10}$/.test(v)) return 'Số SO-ST gồm 8 đến 10 chữ số.';
     return '';
   }
@@ -78,6 +80,7 @@
     if (!v) return '';
     if (k === 'ngay') return fmtDate(v);
     if (k === 'bienSo') return fmtPlate(v);
+    if (k === 'soDienThoai') return v.replace(/^(\d{4})(\d{3})(\d{3})$/, '$1 $2 $3');
     return v;
   }
 
@@ -95,7 +98,7 @@
       const dt = document.createElement('dt'); dt.textContent = f.label;
       const dd = document.createElement('dd'); const v = display(f.k, all[f.k]);
       dd.textContent = v || (f.auto ? 'Tự ghi khi bấm Gửi' : 'Chưa nhập'); if (!v) dd.className = 'empty';
-      if (v && (/^gio/.test(f.k) || f.k === 'soSO')) dd.classList.add('mono');
+      if (v && (/^gio/.test(f.k) || f.k === 'soSO' || f.k === 'soDienThoai')) dd.classList.add('mono');
       dl.append(dt, dd);
     });
   }
@@ -125,6 +128,7 @@
     const el = e.target;
     if (el.id === 'bienSo'){ const p = el.selectionStart; el.value = el.value.toUpperCase().replace(/[^A-Z0-9.\- ]/g, ''); try { el.setSelectionRange(p, p); } catch (_) {} }
     if (el.id === 'soSO') el.value = el.value.replace(/\D/g, '');
+    if (el.id === 'soDienThoai') el.value = el.value.replace(/\D/g, '').slice(0, 10); // dán "0912 345 678" vẫn ra đủ 10 số
     if (el.type === 'radio') shown.add(el.name);
     refresh();
   });
