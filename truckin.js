@@ -41,19 +41,23 @@
 
   // ===== Danh sách trường (theo thứ tự cột file mẫu) =====
   // auto: không có ô nhập, tự ghi theo đồng hồ thực lúc tài xế bấm Gửi (ngày yyyy-mm-dd, giờ 24h HH:MM)
+  // opt: không bắt buộc, để trống vẫn gửi được và không tính vào tiến độ
   const FIELDS = [
     { k: 'ngay', label: 'Ngày', auto: true },
     { k: 'bienSo', label: 'Biển số xe', empty: 'Vui lòng nhập biển số xe.' },
     { k: 'taiXe', label: 'Tên tài xế', empty: 'Vui lòng nhập tên tài xế.' },
     { k: 'soDienThoai', label: 'Số điện thoại', empty: 'Vui lòng nhập số điện thoại tài xế.' },
+    { k: 'maContainer', label: 'Mã đuôi container', opt: true },
     { k: 'gioTruckIn', label: 'Giờ truck-in', auto: true },
     { k: 'nhaVanTai', label: 'Nhà vận tải', radio: true, empty: 'Vui lòng chọn nhà vận tải.' },
     { k: 'loaiDon', label: 'Loại đơn hàng', radio: true, empty: 'Vui lòng chọn loại đơn hàng.' },
-    { k: 'soSO', label: 'Số SO-ST', empty: 'Vui lòng nhập số SO-ST.' }
+    { k: 'soSO', label: 'Số SO-ST', empty: 'Vui lòng nhập số SO-ST.' },
+    { k: 'soPallet', label: 'Số pallet', empty: 'Vui lòng nhập số lượng pallet (không có thì nhập 0).' }
   ];
   const F = Object.fromEntries(FIELDS.map(f => [f.k, f]));
   const INPUTS = FIELDS.filter(f => !f.auto);
-  const TOTAL = INPUTS.length;
+  const REQUIRED = INPUTS.filter(f => !f.opt);
+  const TOTAL = REQUIRED.length;
   const form = $('#regForm');
   const shown = new Set();
   let tried = false;
@@ -63,16 +67,19 @@
     let v = $('#' + k).value.trim();
     if (k === 'bienSo') v = normPlate(v);
     if (k === 'taiXe') v = normName(v);
+    if (k === 'maContainer') v = v.toUpperCase().replace(/[^A-Z0-9]/g, '');
+    if (k === 'soPallet' && v) v = String(Number(v)); // "05" → "5"
     return v;
   }
   const values = () => Object.fromEntries(INPUTS.map(f => [f.k, val(f.k)]));
 
   function check(k, v, all){
-    if (!v) return F[k].empty;
+    if (!v) return F[k].opt ? '' : F[k].empty;
     if (k === 'bienSo' && !PLATE_RE.test(v)) return 'Biển số chưa đúng dạng. Ví dụ: 50H12345 hoặc 51D-119.32';
     if (k === 'taiXe'){ if (/\d/.test(v)) return 'Tên tài xế không được chứa số.'; if (v.replace(/\s/g, '').length < 2) return 'Tên tài xế quá ngắn.'; }
     if (k === 'soDienThoai'){ if (v[0] !== '0') return 'Số điện thoại phải bắt đầu bằng số 0.'; if (!/^0\d{9}$/.test(v)) return 'Số điện thoại gồm đúng 10 chữ số (đang có ' + v.length + ').'; }
     if (k === 'soSO' && !/^\d{8,10}$/.test(v)) return 'Số SO-ST gồm 8 đến 10 chữ số.';
+    if (k === 'soPallet' && !/^\d{1,2}$/.test(v)) return 'Số pallet là số nguyên từ 0 đến 99.';
     return '';
   }
 
@@ -97,8 +104,8 @@
       if (skipPlate && f.k === 'bienSo') return;
       const dt = document.createElement('dt'); dt.textContent = f.label;
       const dd = document.createElement('dd'); const v = display(f.k, all[f.k]);
-      dd.textContent = v || (f.auto ? 'Tự ghi khi bấm Gửi' : 'Chưa nhập'); if (!v) dd.className = 'empty';
-      if (v && (/^gio/.test(f.k) || f.k === 'soSO' || f.k === 'soDienThoai')) dd.classList.add('mono');
+      dd.textContent = v || (f.auto ? 'Tự ghi khi bấm Gửi' : f.opt ? 'Không có' : 'Chưa nhập'); if (!v) dd.className = 'empty';
+      if (v && (/^gio/.test(f.k) || ['soSO', 'soDienThoai', 'maContainer', 'soPallet'].includes(f.k))) dd.classList.add('mono');
       dl.append(dt, dd);
     });
   }
@@ -111,10 +118,10 @@
 
   function refresh(){
     const all = values(); let ok = 0; const okMap = {};
-    INPUTS.forEach(f => { const m = check(f.k, all[f.k], all); okMap[f.k] = !m; if (!m) ok++; if (shown.has(f.k)) paint(f.k, m); });
+    INPUTS.forEach(f => { const m = check(f.k, all[f.k], all); okMap[f.k] = !m; if (!m && !f.opt) ok++; if (shown.has(f.k)) paint(f.k, m); });
     $$('[data-prog-bar]').forEach(b => { b.style.width = (ok / TOTAL * 100) + '%'; b.classList.toggle('complete', ok === TOTAL); });
     $$('.form-section').forEach(s => s.classList.toggle('done', s.dataset.fields.split(',').every(k => okMap[k])));
-    const bad = TOTAL - ok;
+    const bad = INPUTS.filter(f => !okMap[f.k]).length;
     if (tried && bad) setHint('Còn ' + bad + ' thông tin cần bổ sung hoặc sửa', true);
     else setHint(ok === TOTAL ? 'Đã đủ thông tin, bấm gửi' : 'Điền đủ ' + TOTAL + ' thông tin để gửi', false);
     $$('[data-prog-text]').forEach(t => t.textContent = ok + '/' + TOTAL);
@@ -129,6 +136,8 @@
     if (el.id === 'bienSo'){ const p = el.selectionStart; el.value = el.value.toUpperCase().replace(/[^A-Z0-9.\- ]/g, ''); try { el.setSelectionRange(p, p); } catch (_) {} }
     if (el.id === 'soSO') el.value = el.value.replace(/\D/g, '');
     if (el.id === 'soDienThoai') el.value = el.value.replace(/\D/g, '').slice(0, 10); // dán "0912 345 678" vẫn ra đủ 10 số
+    if (el.id === 'maContainer') el.value = el.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11);
+    if (el.id === 'soPallet') el.value = el.value.replace(/\D/g, '').slice(0, 2);
     if (el.type === 'radio') shown.add(el.name);
     refresh();
   });
@@ -149,7 +158,7 @@
     e.preventDefault();
     tried = true; INPUTS.forEach(f => shown.add(f.k));
     const r = refresh();
-    if (r.ok < TOTAL){
+    if (INPUTS.some(f => !r.okMap[f.k])){
       const first = INPUTS.find(f => !r.okMap[f.k]);
       const wrap = form.querySelector('[data-field="' + first.k + '"]');
       wrap.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'center' });

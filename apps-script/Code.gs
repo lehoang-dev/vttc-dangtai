@@ -2,8 +2,8 @@ const SHEET_NAME = 'DangTai';
 const KEY_COL = 'Biển số xe';
 
 // Tên cột ở dòng 1 mà script ghi vào. Thiếu cột nào thì báo lỗi TRƯỚC khi ghi, không để lại dòng ghi dở.
-const COLS = ['Ca', 'Ngày theo ca', 'Biển số xe', 'Tên tài xế', 'Số điện thoại', 'Giờ vào bãi',
-              'Nhà vận tải RPM & FG', 'Loại đơn hàng RPM & FG', 'Số SO-ST'];
+const COLS = ['Ca', 'Ngày theo ca', 'Biển số xe', 'Tên tài xế', 'Số điện thoại', 'Mã đuôi container', 'Giờ vào bãi',
+              'Nhà vận tải RPM & FG', 'Loại đơn hàng RPM & FG', 'Số SO-ST', 'Số pallet'];
 
 function doPost(e) {
   const lock = LockService.getScriptLock();
@@ -35,10 +35,12 @@ function doPost(e) {
     put('Biển số xe', d.bienSo);
     put('Tên tài xế', d.taiXe);
     put('Số điện thoại', String(d.soDienThoai || ''), '@'); // định dạng chữ, giữ số 0 ở đầu
+    put('Mã đuôi container', String(d.maContainer || ''), '@'); // không bắt buộc, để trống nếu xe không chở container
     put('Giờ vào bãi', d.gioTruckIn);
     put('Nhà vận tải RPM & FG', d.nhaVanTai);
     put('Loại đơn hàng RPM & FG', d.loaiDon);
     put('Số SO-ST', String(d.soSO), '@'); // định dạng chữ, giữ nguyên số 0 ở đầu
+    put('Số pallet', d.soPallet === undefined || d.soPallet === '' ? '' : Number(d.soPallet));
 
     return ContentService.createTextOutput('ok ' + shift.ca + ' ' + shift.ngay + ' dòng ' + r);
   } catch (err) {
@@ -112,7 +114,7 @@ function testShifts() {
   ];
   let fail = 0;
   cases.forEach((c, i) => {
-    const payload = { ngay: c[0], gioTruckIn: c[1], bienSo: 'TEST' + (i + 1), taiXe: 'Test', soDienThoai: '0912345678', nhaVanTai: 'ADV', loaiDon: '2.3T', soSO: '12345678' };
+    const payload = { ngay: c[0], gioTruckIn: c[1], bienSo: 'TEST' + (i + 1), taiXe: 'Test', soDienThoai: '0912345678', maContainer: i % 2 ? '' : '0123456', nhaVanTai: 'ADV', loaiDon: '2.3T', soSO: '12345678', soPallet: String(i * 3) };
     const res = doPost({ postData: { contents: JSON.stringify(payload) } }).getContent();
     const m = res.match(/^ok (.+) dòng (\d+)$/);
     if (!m) { fail++; Logger.log('SAI   ' + c[0] + ' ' + c[1] + ' → ' + res); return; }
