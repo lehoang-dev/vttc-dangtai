@@ -1,9 +1,21 @@
 const SHEET_NAME = 'DangTai';
 const KEY_COL = 'Biển số xe';
 
-// Tên cột ở dòng 1 mà script ghi vào. Thiếu cột nào thì báo lỗi TRƯỚC khi ghi, không để lại dòng ghi dở.
-const COLS = ['Ca', 'Ngày theo ca', 'Biển số xe', 'Tên tài xế', 'Số điện thoại', 'Mã đuôi container', 'Giờ vào bãi',
-              'Nhà vận tải RPM & FG', 'Loại đơn hàng RPM & FG', 'Số SO-ST', 'Số pallet'];
+// Tên cột ở dòng 1 mà script ghi vào — đổi tên cột trong Sheet thì CHỈ sửa ở đây.
+// Bước kiểm tra và bước ghi đều lấy tên từ đây. Thiếu cột nào thì báo lỗi TRƯỚC khi ghi, không để lại dòng ghi dở.
+const COL = {
+  ca: 'Ca',
+  ngayCa: 'Ngày theo ca',
+  bienSo: KEY_COL,
+  container: 'Biển container',
+  taiXe: 'Tên tài xế',
+  pallet: 'Số pallet',
+  sdt: 'Số điện thoại',
+  gio: 'Giờ vào bãi',
+  nhaVanTai: 'Nhà vận tải RPM & FG',
+  loaiDon: 'Loại đơn hàng RPM & FG',
+  soSO: 'Số SO-ST'
+};
 
 function doPost(e) {
   const lock = LockService.getScriptLock();
@@ -18,29 +30,29 @@ function doPost(e) {
         + sh.getParent().getName() + '". Dòng 1 đang có: ' + JSON.stringify(head.filter(String)));
       return i + 1;
     };
-    COLS.forEach(col); // kiểm tra đủ cột trước khi ghi
+    Object.values(COL).forEach(col); // kiểm tra đủ cột trước khi ghi
 
     const shift = shiftOf_(d.ngay, d.gioTruckIn);
     const tz = sh.getParent().getSpreadsheetTimeZone();
-    const r = nextRow_(sh, col(KEY_COL));
+    const r = nextRow_(sh, col(COL.bienSo));
     const put = (name, value, format) => {
       const cell = sh.getRange(r, col(name));
       if (format) cell.setNumberFormat(format);
       cell.setValue(value);
     };
 
-    put('Ca', shift.ca);
+    put(COL.ca, shift.ca);
     // Tạo ngày theo múi giờ của Sheet để không bị lệch 1 ngày
-    put('Ngày theo ca', Utilities.parseDate(shift.ngay, tz, 'yyyy-MM-dd'), 'dd/mm/yyyy');
-    put('Biển số xe', d.bienSo);
-    put('Tên tài xế', d.taiXe);
-    put('Số điện thoại', String(d.soDienThoai || ''), '@'); // định dạng chữ, giữ số 0 ở đầu
-    put('Mã đuôi container', String(d.maContainer || ''), '@'); // không bắt buộc, để trống nếu xe không chở container
-    put('Giờ vào bãi', d.gioTruckIn);
-    put('Nhà vận tải RPM & FG', d.nhaVanTai);
-    put('Loại đơn hàng RPM & FG', d.loaiDon);
-    put('Số SO-ST', String(d.soSO), '@'); // định dạng chữ, giữ nguyên số 0 ở đầu
-    put('Số pallet', d.soPallet === undefined || d.soPallet === '' ? '' : Number(d.soPallet));
+    put(COL.ngayCa, Utilities.parseDate(shift.ngay, tz, 'yyyy-MM-dd'), 'dd/mm/yyyy');
+    put(COL.bienSo, d.bienSo);
+    put(COL.container, String(d.maContainer || ''), '@'); // không bắt buộc, để trống nếu xe không chở container
+    put(COL.taiXe, d.taiXe);
+    put(COL.pallet, d.soPallet === undefined || d.soPallet === '' ? '' : Number(d.soPallet));
+    put(COL.sdt, String(d.soDienThoai || ''), '@'); // định dạng chữ, giữ số 0 ở đầu
+    put(COL.gio, d.gioTruckIn);
+    put(COL.nhaVanTai, d.nhaVanTai);
+    put(COL.loaiDon, d.loaiDon);
+    put(COL.soSO, String(d.soSO), '@'); // định dạng chữ, giữ nguyên số 0 ở đầu
 
     return ContentService.createTextOutput('ok ' + shift.ca + ' ' + shift.ngay + ' dòng ' + r);
   } catch (err) {
