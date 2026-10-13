@@ -47,7 +47,7 @@
     { k: 'bienSo', label: 'Biển số xe', empty: 'Vui lòng nhập biển số xe.' },
     { k: 'taiXe', label: 'Tên tài xế', empty: 'Vui lòng nhập tên tài xế.' },
     { k: 'soDienThoai', label: 'Số điện thoại', empty: 'Vui lòng nhập số điện thoại tài xế.' },
-    { k: 'maContainer', label: 'Mã đuôi container', opt: true },
+    { k: 'maContainer', label: 'Biển số container', opt: true },
     { k: 'gioTruckIn', label: 'Giờ truck-in', auto: true },
     { k: 'nhaVanTai', label: 'Nhà vận tải', radio: true, empty: 'Vui lòng chọn nhà vận tải.' },
     { k: 'loaiDon', label: 'Loại đơn hàng', radio: true, empty: 'Vui lòng chọn loại đơn hàng.' },
