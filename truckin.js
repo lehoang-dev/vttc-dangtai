@@ -28,6 +28,7 @@
 
   // ===== Chuẩn hoá dữ liệu =====
   const PLATE_RE = /^\d{2}[A-Z]{1,2}\d{4,6}$/;
+  const CONT_RE = /^\d{2}(R|RM)\d{4,5}$/; // biển rơ-moóc/sơ-mi rơ-moóc: chữ chỉ là R hoặc RM, VD 12RM-123.45
   const normPlate = s => s.toUpperCase().replace(/[^A-Z0-9]/g, '');
   function fmtPlate(p){
     const m = p.match(/^(\d{2}[A-Z]{1,2})(\d+)$/); if (!m) return p;
@@ -45,9 +46,9 @@
   const FIELDS = [
     { k: 'ngay', label: 'Ngày', auto: true },
     { k: 'bienSo', label: 'Biển số xe', empty: 'Vui lòng nhập biển số xe.' },
+    { k: 'maContainer', label: 'Biển số container', opt: true },
     { k: 'taiXe', label: 'Tên tài xế', empty: 'Vui lòng nhập tên tài xế.' },
     { k: 'soDienThoai', label: 'Số điện thoại', empty: 'Vui lòng nhập số điện thoại tài xế.' },
-    { k: 'maContainer', label: 'Biển số container', opt: true },
     { k: 'gioTruckIn', label: 'Giờ truck-in', auto: true },
     { k: 'nhaVanTai', label: 'Nhà vận tải', radio: true, empty: 'Vui lòng chọn nhà vận tải.' },
     { k: 'loaiDon', label: 'Loại đơn hàng', radio: true, empty: 'Vui lòng chọn loại đơn hàng.' },
@@ -65,9 +66,8 @@
   function val(k){
     if (F[k].radio){ const c = form.querySelector('input[name="' + k + '"]:checked'); return c ? c.value : ''; }
     let v = $('#' + k).value.trim();
-    if (k === 'bienSo') v = normPlate(v);
+    if (k === 'bienSo' || k === 'maContainer') v = normPlate(v);
     if (k === 'taiXe') v = normName(v);
-    if (k === 'maContainer') v = v.toUpperCase().replace(/[^A-Z0-9]/g, '');
     if (k === 'soPallet' && v) v = String(Number(v)); // "05" → "5"
     return v;
   }
@@ -76,6 +76,11 @@
   function check(k, v, all){
     if (!v) return F[k].opt ? '' : F[k].empty;
     if (k === 'bienSo' && !PLATE_RE.test(v)) return 'Biển số chưa đúng dạng. Ví dụ: 50H12345 hoặc 51D-119.32';
+    if (k === 'maContainer' && !CONT_RE.test(v)){
+      const m = v.match(/^\d{2}([A-Z]+)\d+$/);
+      if (m && m[1] !== 'R' && m[1] !== 'RM') return 'Chữ trong biển số container chỉ được là R hoặc RM (đang là ' + m[1] + ').';
+      return 'Biển số container chưa đúng dạng. Ví dụ: 51R-123.45 hoặc 12RM-123.45';
+    }
     if (k === 'taiXe'){ if (/\d/.test(v)) return 'Tên tài xế không được chứa số.'; if (v.replace(/\s/g, '').length < 2) return 'Tên tài xế quá ngắn.'; }
     if (k === 'soDienThoai'){ if (v[0] !== '0') return 'Số điện thoại phải bắt đầu bằng số 0.'; if (!/^0\d{9}$/.test(v)) return 'Số điện thoại gồm đúng 10 chữ số (đang có ' + v.length + ').'; }
     if (k === 'soSO' && !/^\d{8,10}$/.test(v)) return 'Số SO-ST gồm 8 đến 10 chữ số.';
@@ -86,7 +91,7 @@
   function display(k, v){
     if (!v) return '';
     if (k === 'ngay') return fmtDate(v);
-    if (k === 'bienSo') return fmtPlate(v);
+    if (k === 'bienSo' || k === 'maContainer') return fmtPlate(v);
     if (k === 'soDienThoai') return v.replace(/^(\d{4})(\d{3})(\d{3})$/, '$1 $2 $3');
     return v;
   }
@@ -133,10 +138,9 @@
   // ===== Sự kiện nhập liệu =====
   form.addEventListener('input', e => {
     const el = e.target;
-    if (el.id === 'bienSo'){ const p = el.selectionStart; el.value = el.value.toUpperCase().replace(/[^A-Z0-9.\- ]/g, ''); try { el.setSelectionRange(p, p); } catch (_) {} }
+    if (el.id === 'bienSo' || el.id === 'maContainer'){ const p = el.selectionStart; el.value = el.value.toUpperCase().replace(/[^A-Z0-9.\- ]/g, ''); try { el.setSelectionRange(p, p); } catch (_) {} }
     if (el.id === 'soSO') el.value = el.value.replace(/\D/g, '');
     if (el.id === 'soDienThoai') el.value = el.value.replace(/\D/g, '').slice(0, 10); // dán "0912 345 678" vẫn ra đủ 10 số
-    if (el.id === 'maContainer') el.value = el.value.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 11);
     if (el.id === 'soPallet') el.value = el.value.replace(/\D/g, '').slice(0, 2);
     if (el.type === 'radio') shown.add(el.name);
     refresh();
@@ -145,6 +149,7 @@
     const el = e.target; if (!el.id || !F[el.id]) return;
     if (el.id === 'taiXe' && el.value.trim()) el.value = normName(el.value);
     if (el.id === 'bienSo'){ const n = normPlate(el.value); if (PLATE_RE.test(n)) el.value = fmtPlate(n); }
+    if (el.id === 'maContainer'){ const n = normPlate(el.value); if (CONT_RE.test(n)) el.value = fmtPlate(n); }
     if (el.value.trim()) shown.add(el.id);
     refresh();
   });
