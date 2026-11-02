@@ -1,11 +1,12 @@
 (function(){
   'use strict';
   // ===== Cấu hình =====
-  // Dán URL Web App (Google Apps Script) vào ENDPOINT để nhận dữ liệu vào Google Sheet.
-  // Để trống = chế độ xem thử, form không gửi dữ liệu đi đâu.
-  const CONFIG = { ENDPOINT: 'https://script.google.com/macros/s/AKfycbz16gNy0npNtsdOjg3RgLHMS-qpgM_HMV3k8ochx2LEYZReuOWK2grpu4b9gIucAXYf/exec' };
-  // Chế độ thử: mở link kèm ?thu=1 → dữ liệu ghi vào tab DangTai2, không vào bảng thật.
-  const TEST_TAB = /[?&]thu=1\b/.test(location.search) ? 'DangTai2' : '';
+  // ENDPOINT: URL Web App (Google Apps Script) nhận dữ liệu vào Google Sheet. Để trống = xem thử, không gửi đi đâu.
+  // TAB: tên tab gửi kèm cho Apps Script ('' = tab mặc định DangTai). BANNER: dải cảnh báo ở đầu trang ('' = không hiện).
+  // ĐÂY LÀ DÒNG DUY NHẤT KHÁC NHAU GIỮA 2 NHÁNH. Gộp test → main thì giữ nguyên dòng này của main:
+  //   main: link Apps Script file thật, TAB '', BANNER ''
+  //   test: link Apps Script file thử, TAB 'DangTai2', BANNER 'BẢN THỬ NGHIỆM…'
+  const CONFIG = { ENDPOINT: 'https://script.google.com/macros/s/AKfycbz16gNy0npNtsdOjg3RgLHMS-qpgM_HMV3k8ochx2LEYZReuOWK2grpu4b9gIucAXYf/exec', TAB: '', BANNER: '' };
 
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
@@ -27,7 +28,7 @@
   // ===== Đồng hồ =====
   function tick(){ const d = new Date(); $('#clockTime').textContent = hm(d); $('#clockDate').textContent = WD[d.getDay()] + ', ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear(); }
   tick(); setInterval(tick, 15000);
-  if (TEST_TAB){ const b = $('#testBanner'); b.textContent = b.textContent.replace('{tab}', TEST_TAB); b.hidden = false; }
+  if (CONFIG.BANNER){ const b = $('#testBanner'); b.textContent = CONFIG.BANNER; b.hidden = false; }
 
   // ===== Chuẩn hoá dữ liệu =====
   const PLATE_RE = /^\d{2}[A-Z]{1,2}\d{4,6}$/;
@@ -43,9 +44,31 @@
     return s.trim().replace(/\s+/g, ' ').split(' ').map(w => { const l = w.toLocaleLowerCase('vi'); return l.charAt(0).toLocaleUpperCase('vi') + l.slice(1); }).join(' ');
   }
 
+  // ===== Loại đơn → số phiếu =====
+  // Luôn có 2 ô số phiếu. Loại đơn 1 việc: chỉ bắt buộc ô 1. Loại đơn 2 việc (nhập/trả vỏ + lấy hàng): bắt buộc cả 2.
+  // PHIEU chỉ dùng để ghi chú dưới ô: ô đó là phiếu gì.
+  const PHIEU = {
+    nhap:   { label: 'nhập hàng' },
+    layCK:  { label: 'lấy hàng chuyển kho' },
+    layNPP: { label: 'lấy hàng NPP' },
+    traVo:  { label: 'trả vỏ' }
+  };
+  const ORDER = {
+    'Nhập hàng': ['nhap'],
+    'Lấy hàng chuyển kho': ['layCK'],
+    'Lấy hàng NPP': ['layNPP'],
+    'Trả vỏ': ['traVo'],
+    'Nhập hàng - lấy hàng chuyển kho': ['nhap', 'layCK'],
+    'Nhập hàng - lấy hàng NPP': ['nhap', 'layNPP'],
+    'Trả vỏ - lấy hàng chuyển kho': ['traVo', 'layCK'],
+    'Trả vỏ - lấy hàng NPP': ['traVo', 'layNPP']
+  };
+  const slotsOf = loai => (ORDER[loai] || []).map(x => PHIEU[x]);
+
   // ===== Danh sách trường (theo thứ tự cột file mẫu) =====
   // auto: không có ô nhập, tự ghi theo đồng hồ thực lúc tài xế bấm Gửi (ngày yyyy-mm-dd, giờ 24h HH:MM)
   // opt: không bắt buộc, để trống vẫn gửi được và không tính vào tiến độ
+  // slot: ô số phiếu thứ mấy; ô 1 luôn bắt buộc, ô 2 chỉ bắt buộc khi loại đơn có 2 việc
   const FIELDS = [
     { k: 'ngay', label: 'Ngày', auto: true },
     { k: 'bienSo', label: 'Biển số xe', empty: 'Vui lòng nhập biển số xe.' },
@@ -55,13 +78,15 @@
     { k: 'gioTruckIn', label: 'Giờ truck-in', auto: true },
     { k: 'nhaVanTai', label: 'Nhà vận tải', radio: true, empty: 'Vui lòng chọn nhà vận tải.' },
     { k: 'loaiDon', label: 'Loại đơn hàng', radio: true, empty: 'Vui lòng chọn loại đơn hàng.' },
-    { k: 'soSO', label: 'Số SO-ST', empty: 'Vui lòng nhập số SO-ST.' },
+    { k: 'phieu1', label: 'Số phiếu 1', slot: 0 },
+    { k: 'phieu2', label: 'Số phiếu 2', slot: 1 },
     { k: 'soPallet', label: 'Số pallet', empty: 'Vui lòng nhập số lượng pallet (không có thì nhập 0).' }
   ];
   const F = Object.fromEntries(FIELDS.map(f => [f.k, f]));
   const INPUTS = FIELDS.filter(f => !f.auto);
-  const REQUIRED = INPUTS.filter(f => !f.opt);
-  const TOTAL = REQUIRED.length;
+  const slotOf = (f, all) => f.slot === undefined ? null : slotsOf(all.loaiDon)[f.slot] || null;
+  const required = (f, all) => f.slot === undefined ? !f.opt : f.slot === 0 || slotsOf(all.loaiDon).length > 1;
+  const labelOf = (f, all) => { const s = slotOf(f, all); return f.label + (s ? ' (' + s.label + ')' : ''); };
   const form = $('#regForm');
   const shown = new Set();
   let tried = false;
@@ -77,6 +102,11 @@
   const values = () => Object.fromEntries(INPUTS.map(f => [f.k, val(f.k)]));
 
   function check(k, v, all){
+    if (F[k].slot !== undefined){
+      const name = F[k].label.toLocaleLowerCase('vi');
+      if (!v) return required(F[k], all) ? 'Vui lòng nhập ' + name + (F[k].slot ? ' (loại đơn này có 2 phiếu).' : '.') : '';
+      return /^\d{8,10}$/.test(v) ? '' : F[k].label + ' gồm 8 đến 10 chữ số.';
+    }
     if (!v) return F[k].opt ? '' : F[k].empty;
     if (k === 'bienSo' && !PLATE_RE.test(v)) return 'Biển số chưa đúng dạng. Ví dụ: 50H12345 hoặc 51D-119.32';
     if (k === 'maContainer' && !CONT_RE.test(v)){
@@ -86,7 +116,6 @@
     }
     if (k === 'taiXe'){ if (/\d/.test(v)) return 'Tên tài xế không được chứa số.'; if (v.replace(/\s/g, '').length < 2) return 'Tên tài xế quá ngắn.'; }
     if (k === 'soDienThoai'){ if (v[0] !== '0') return 'Số điện thoại phải bắt đầu bằng số 0.'; if (!/^0\d{9}$/.test(v)) return 'Số điện thoại gồm đúng 10 chữ số (đang có ' + v.length + ').'; }
-    if (k === 'soSO' && !/^\d{8,10}$/.test(v)) return 'Số SO-ST gồm 8 đến 10 chữ số.';
     if (k === 'soPallet' && !/^\d{1,2}$/.test(v)) return 'Số pallet là số nguyên từ 0 đến 99.';
     return '';
   }
@@ -101,7 +130,7 @@
 
   function paint(k, msg){
     const wrap = form.querySelector('[data-field="' + k + '"]');
-    if (F[k].radio) wrap.querySelector('.choice-group').classList.toggle('is-invalid-group', !!msg);
+    if (F[k].radio) wrap.querySelectorAll('.choice-group').forEach(g => g.classList.toggle('is-invalid-group', !!msg));
     else $('#' + k).classList.toggle('is-invalid', !!msg);
     wrap.querySelector('[data-err]').textContent = msg || '';
   }
@@ -110,10 +139,10 @@
     dl.innerHTML = '';
     FIELDS.forEach(f => {
       if (skipPlate && f.k === 'bienSo') return;
-      const dt = document.createElement('dt'); dt.textContent = f.label;
+      const dt = document.createElement('dt'); dt.textContent = labelOf(f, all);
       const dd = document.createElement('dd'); const v = display(f.k, all[f.k]);
-      dd.textContent = v || (f.auto ? 'Tự ghi khi bấm Gửi' : f.opt ? 'Không có' : 'Chưa nhập'); if (!v) dd.className = 'empty';
-      if (v && (/^gio/.test(f.k) || ['soSO', 'soDienThoai', 'maContainer', 'soPallet'].includes(f.k))) dd.classList.add('mono');
+      dd.textContent = v || (f.auto ? 'Tự ghi khi bấm Gửi' : required(f, all) ? 'Chưa nhập' : 'Không có'); if (!v) dd.className = 'empty';
+      if (v && (/^gio/.test(f.k) || ['phieu1', 'phieu2', 'soDienThoai', 'maContainer', 'soPallet'].includes(f.k))) dd.classList.add('mono');
       dl.append(dt, dd);
     });
   }
@@ -124,9 +153,22 @@
     const w = $('#mWarn'); w.hidden = !warn; w.textContent = warn ? text : '';
   }
 
+  // Ghi chú dưới 2 ô số phiếu theo loại đơn; dấu * ở ô 2 chỉ hiện khi loại đơn có 2 việc.
+  function syncSlots(all){
+    const slots = slotsOf(all.loaiDon);
+    ['phieu1', 'phieu2'].forEach((k, i) => {
+      const wrap = form.querySelector('[data-field="' + k + '"]'); const s = slots[i];
+      wrap.querySelector('.req').hidden = !required(F[k], all);
+      wrap.querySelector('[data-hint]').textContent = s ? 'Phiếu ' + s.label + ' · 8 đến 10 chữ số'
+        : i === 0 ? '8 đến 10 chữ số, xem trên chứng từ' : all.loaiDon ? 'Không bắt buộc với loại đơn này' : 'Chỉ bắt buộc khi loại đơn có 2 việc';
+    });
+  }
+
   function refresh(){
     const all = values(); let ok = 0; const okMap = {};
-    INPUTS.forEach(f => { const m = check(f.k, all[f.k], all); okMap[f.k] = !m; if (!m && !f.opt) ok++; if (shown.has(f.k)) paint(f.k, m); });
+    syncSlots(all);
+    const need = INPUTS.filter(f => required(f, all)); const TOTAL = need.length;
+    INPUTS.forEach(f => { const m = check(f.k, all[f.k], all); okMap[f.k] = !m; if (!m && need.includes(f)) ok++; if (shown.has(f.k)) paint(f.k, m); });
     $$('[data-prog-bar]').forEach(b => { b.style.width = (ok / TOTAL * 100) + '%'; b.classList.toggle('complete', ok === TOTAL); });
     $$('.form-section').forEach(s => s.classList.toggle('done', s.dataset.fields.split(',').every(k => okMap[k])));
     const bad = INPUTS.filter(f => !okMap[f.k]).length;
@@ -142,7 +184,7 @@
   form.addEventListener('input', e => {
     const el = e.target;
     if (el.id === 'bienSo' || el.id === 'maContainer'){ const p = el.selectionStart; el.value = el.value.toUpperCase().replace(/[^A-Z0-9.\- ]/g, ''); try { el.setSelectionRange(p, p); } catch (_) {} }
-    if (el.id === 'soSO') el.value = el.value.replace(/\D/g, '');
+    if (el.id === 'phieu1' || el.id === 'phieu2') el.value = el.value.replace(/\D/g, '');
     if (el.id === 'soDienThoai') el.value = el.value.replace(/\D/g, '').slice(0, 10); // dán "0912 345 678" vẫn ra đủ 10 số
     if (el.id === 'soPallet') el.value = el.value.replace(/\D/g, '').slice(0, 2);
     if (el.type === 'radio') shown.add(el.name);
@@ -198,8 +240,7 @@
     const btn = $('#confirmSend'); const label = btn.innerHTML;
     btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Đang gửi…';
     try {
-      const payload = Object.assign({}, pending, { maDangTai: makeRef(pending), thoiGianGui: new Date().toISOString() });
-      if (TEST_TAB) payload.tab = TEST_TAB;
+      const payload = Object.assign({}, pending, { maDangTai: makeRef(pending), thoiGianGui: new Date().toISOString() });      if (CONFIG.TAB) payload.tab = CONFIG.TAB;
       const res = await send(payload);
       const m = modal(); if (m) m.hide();
       showSuccess(payload, res.demo);
