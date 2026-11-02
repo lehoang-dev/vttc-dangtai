@@ -1,14 +1,12 @@
 (function(){
   'use strict';
   // ===== Cấu hình =====
-  // Dán URL Web App (Google Apps Script) vào ENDPOINT để nhận dữ liệu vào Google Sheet.
-  // Để trống = chế độ xem thử, form không gửi dữ liệu đi đâu.
-  // NHÁNH TEST: ENDPOINT trỏ tới Apps Script của file Sheet thử (để trống = không gửi đi đâu).
-  // Khi gộp vào main phải giữ ENDPOINT của main và bỏ BANNER.
-  const CONFIG = { ENDPOINT: 'https://script.google.com/macros/s/AKfycbxhezBbvOQxP3S6i3PxIRU3Y6d6wIvTHDGn8baOEwcGCK5Vl0wSGgJqTE2HPfxNiN9ICQ/exec', BANNER: 'BẢN THỬ NGHIỆM: dữ liệu gửi vào file Sheet thử, không dùng để đăng tài thật' };
-  // Chế độ thử: mở link kèm ?thu=1 → dữ liệu ghi vào tab DangTai2, không vào bảng thật.
-  // NHÁNH TEST: file Sheet thử dùng tab DangTai2 → luôn gửi kèm tab này.
-  const TEST_TAB = 'DangTai2';
+  // ENDPOINT: URL Web App (Google Apps Script) nhận dữ liệu vào Google Sheet. Để trống = xem thử, không gửi đi đâu.
+  // TAB: tên tab gửi kèm cho Apps Script ('' = tab mặc định DangTai). BANNER: dải cảnh báo ở đầu trang ('' = không hiện).
+  // ĐÂY LÀ DÒNG DUY NHẤT KHÁC NHAU GIỮA 2 NHÁNH. Gộp test → main thì giữ nguyên dòng này của main:
+  //   main: link Apps Script file thật, TAB '', BANNER ''
+  //   test: link Apps Script file thử, TAB 'DangTai2', BANNER 'BẢN THỬ NGHIỆM…'
+  const CONFIG = { ENDPOINT: 'https://script.google.com/macros/s/AKfycbxhezBbvOQxP3S6i3PxIRU3Y6d6wIvTHDGn8baOEwcGCK5Vl0wSGgJqTE2HPfxNiN9ICQ/exec', TAB: 'DangTai2', BANNER: 'BẢN THỬ NGHIỆM: dữ liệu gửi vào file Sheet thử, không dùng để đăng tài thật' };
 
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
@@ -30,7 +28,6 @@
   // ===== Đồng hồ =====
   function tick(){ const d = new Date(); $('#clockTime').textContent = hm(d); $('#clockDate').textContent = WD[d.getDay()] + ', ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear(); }
   tick(); setInterval(tick, 15000);
-  if (TEST_TAB){ const b = $('#testBanner'); b.textContent = b.textContent.replace('{tab}', TEST_TAB); b.hidden = false; }
   if (CONFIG.BANNER){ const b = $('#testBanner'); b.textContent = CONFIG.BANNER; b.hidden = false; }
 
   // ===== Chuẩn hoá dữ liệu =====
@@ -243,7 +240,7 @@
     const btn = $('#confirmSend'); const label = btn.innerHTML;
     btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Đang gửi…';
     try {
-      const payload = Object.assign({}, pending, { maDangTai: makeRef(pending), thoiGianGui: new Date().toISOString() });      if (TEST_TAB) payload.tab = TEST_TAB;
+      const payload = Object.assign({}, pending, { maDangTai: makeRef(pending), thoiGianGui: new Date().toISOString() });      if (CONFIG.TAB) payload.tab = CONFIG.TAB;
       const res = await send(payload);
       const m = modal(); if (m) m.hide();
       showSuccess(payload, res.demo);
