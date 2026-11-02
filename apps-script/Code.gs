@@ -15,8 +15,8 @@ const COL = {
   pallet: 'Số pallet',
   sdt: 'Số điện thoại',
   gio: 'Giờ vào bãi',
-  nhaVanTai: 'Nhà vận tải RPM & FG',
-  loaiDon: 'Loại đơn hàng RPM & FG',
+  nhaVanTai: 'Nhà vận tải',
+  loaiDon: 'Loại đơn hàng',
   // Số phiếu 1 luôn có; Số phiếu 2 có khi loại đơn 2 việc (nhập/trả vỏ + lấy hàng). Phiếu nào là gì: xem cột Loại đơn hàng.
   phieu1: 'Số phiếu 1',
   phieu2: 'Số phiếu 2'
