@@ -1,4 +1,7 @@
 const SHEET_NAME = 'DangTai';
+// Tab thử nghiệm: form mở bằng link ?thu=1 gửi kèm tab: 'DangTai2' → ghi vào đây, không đụng dữ liệu thật.
+// Chỉ nhận đúng 2 tên này; tên khác hoặc không gửi → ghi vào SHEET_NAME.
+const TEST_SHEET = 'DangTai2';
 const KEY_COL = 'Biển số xe';
 
 // Tên cột ở dòng 1 mà script ghi vào — đổi tên cột trong Sheet thì CHỈ sửa ở đây.
@@ -22,11 +25,11 @@ function doPost(e) {
   lock.waitLock(10000); // tránh 2 tài xế gửi cùng lúc bị ghi chồng dòng
   try {
     const d = JSON.parse(e.postData.contents);
-    const sh = getSheet_();
+    const sh = getSheet_(d.tab === TEST_SHEET ? TEST_SHEET : SHEET_NAME);
     const head = headers_(sh);
     const col = name => {
       const i = head.indexOf(name);
-      if (i < 0) throw new Error('Không tìm thấy cột "' + name + '" ở dòng 1, tab "' + SHEET_NAME + '", file "'
+      if (i < 0) throw new Error('Không tìm thấy cột "' + name + '" ở dòng 1, tab "' + sh.getName() + '", file "'
         + sh.getParent().getName() + '". Dòng 1 đang có: ' + JSON.stringify(head.filter(String)));
       return i + 1;
     };
@@ -54,7 +57,7 @@ function doPost(e) {
     put(COL.loaiDon, d.loaiDon);
     put(COL.soSO, String(d.soSO), '@'); // định dạng chữ, giữ nguyên số 0 ở đầu
 
-    return ContentService.createTextOutput('ok ' + shift.ca + ' ' + shift.ngay + ' dòng ' + r);
+    return ContentService.createTextOutput('ok ' + shift.ca + ' ' + shift.ngay + ' dòng ' + r + ' tab ' + sh.getName());
   } catch (err) {
     console.error(err); // xem lỗi trong mục Thực thi (Executions)
     return ContentService.createTextOutput('error: ' + err);
@@ -68,9 +71,10 @@ function doGet() {
   return ContentService.createTextOutput('OK - DangTai endpoint đang chạy');
 }
 
-function getSheet_() {
-  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(SHEET_NAME);
-  if (!sh) throw new Error('Không tìm thấy tab "' + SHEET_NAME + '"');
+function getSheet_(name) {
+  name = name || SHEET_NAME;
+  const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
+  if (!sh) throw new Error('Không tìm thấy tab "' + name + '"');
   return sh;
 }
 
@@ -105,11 +109,11 @@ function shiftOf_(ngay, gio) {
 }
 
 // Thử chia ca + số thứ tự bằng giờ giả. Chạy trong trình soạn thảo, không qua Web App.
-// Dùng năm 2000 để không lẫn với xe thật trong ca hiện tại. Tự xoá dòng thử cũ trước khi chạy.
+// Ghi vào tab thử nghiệm DangTai2, không đụng dữ liệu thật. Tự xoá dòng thử cũ trước khi chạy.
 // STT đọc lại từ chính cột STT2 sau khi công thức tính xong, nên kiểm tra được cả công thức.
 function testShifts() {
   xoaTest();
-  const sh = getSheet_();
+  const sh = getSheet_(TEST_SHEET);
   // STT2 do công thức ở A1 tự tính; script không ghi vào cột này (ghi vào sẽ làm cả cột #REF!)
   const sttCol = headers_(sh).indexOf('STT2') + 1;
   if (!sttCol) throw new Error('Không thấy cột "STT2" ở dòng 1. Nếu A1 đang #REF!: chọn A2 đến cuối cột, bấm Delete.');
@@ -126,9 +130,9 @@ function testShifts() {
   ];
   let fail = 0;
   cases.forEach((c, i) => {
-    const payload = { ngay: c[0], gioTruckIn: c[1], bienSo: 'TEST' + (i + 1), taiXe: 'Test', soDienThoai: '0912345678', maContainer: i % 2 ? '' : '0123456', nhaVanTai: 'ADV', loaiDon: '2.3T', soSO: '12345678', soPallet: String(i * 3) };
+    const payload = { ngay: c[0], gioTruckIn: c[1], bienSo: 'TEST' + (i + 1), taiXe: 'Test', soDienThoai: '0912345678', maContainer: i % 2 ? '' : '0123456', nhaVanTai: 'ADV', loaiDon: '2.3T', soSO: '12345678', soPallet: String(i * 3), tab: TEST_SHEET };
     const res = doPost({ postData: { contents: JSON.stringify(payload) } }).getContent();
-    const m = res.match(/^ok (.+) dòng (\d+)$/);
+    const m = res.match(/^ok (.+) dòng (\d+) tab /);
     if (!m) { fail++; Logger.log('SAI   ' + c[0] + ' ' + c[1] + ' → ' + res); return; }
     SpreadsheetApp.flush();
     const got = m[1] + ' STT ' + sh.getRange(Number(m[2]), sttCol).getDisplayValue();
@@ -139,11 +143,20 @@ function testShifts() {
   Logger.log(fail ? fail + ' trường hợp SAI' : 'Tất cả đều đúng. Chạy xoaTest để xoá các dòng TEST.');
 }
 
-// Xoá các dòng thử (biển số bắt đầu bằng TEST).
+// Xoá các dòng thử (biển số bắt đầu bằng TEST) ở cả tab thật lẫn tab thử nghiệm.
 function xoaTest() {
-  const sh = getSheet_();
-  const c = headers_(sh).indexOf(KEY_COL);
-  if (c < 0 || sh.getLastRow() < 2) return;
-  const vals = sh.getRange(2, c + 1, sh.getLastRow() - 1, 1).getValues();
-  for (let i = vals.length - 1; i >= 0; i--) if (/^TEST/.test(String(vals[i][0]))) sh.deleteRow(i + 2);
+  [SHEET_NAME, TEST_SHEET].forEach(name => {
+    const sh = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(name);
+    if (!sh) return;
+    const c = headers_(sh).indexOf(KEY_COL);
+    if (c < 0 || sh.getLastRow() < 2) return;
+    const vals = sh.getRange(2, c + 1, sh.getLastRow() - 1, 1).getValues();
+    for (let i = vals.length - 1; i >= 0; i--) if (/^TEST/.test(String(vals[i][0]))) sh.deleteRow(i + 2);
+  });
+}
+
+// Xoá hết dữ liệu thử ở tab DangTai2 (giữ dòng tiêu đề và công thức STT2 ở A1).
+function xoaDangTai2() {
+  const sh = getSheet_(TEST_SHEET);
+  if (sh.getLastRow() >= 2) sh.getRange(2, 1, sh.getLastRow() - 1, sh.getLastColumn()).clearContent();
 }
