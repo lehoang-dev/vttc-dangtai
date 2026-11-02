@@ -3,7 +3,9 @@
   // ===== Cấu hình =====
   // Dán URL Web App (Google Apps Script) vào ENDPOINT để nhận dữ liệu vào Google Sheet.
   // Để trống = chế độ xem thử, form không gửi dữ liệu đi đâu.
-  const CONFIG = { ENDPOINT: 'https://script.google.com/macros/s/AKfycbz16gNy0npNtsdOjg3RgLHMS-qpgM_HMV3k8ochx2LEYZReuOWK2grpu4b9gIucAXYf/exec' };
+  // NHÁNH TEST: ENDPOINT trỏ tới Apps Script của file Sheet thử (để trống = không gửi đi đâu).
+  // Khi gộp vào main phải giữ ENDPOINT của main và bỏ BANNER.
+  const CONFIG = { ENDPOINT: '', BANNER: 'BẢN THỬ NGHIỆM: dữ liệu gửi vào file Sheet thử, không dùng để đăng tài thật' };
   // Chế độ thử: mở link kèm ?thu=1 → dữ liệu ghi vào tab DangTai2, không vào bảng thật.
   const TEST_TAB = /[?&]thu=1\b/.test(location.search) ? 'DangTai2' : '';
 
@@ -28,6 +30,7 @@
   function tick(){ const d = new Date(); $('#clockTime').textContent = hm(d); $('#clockDate').textContent = WD[d.getDay()] + ', ' + pad(d.getDate()) + '/' + pad(d.getMonth() + 1) + '/' + d.getFullYear(); }
   tick(); setInterval(tick, 15000);
   if (TEST_TAB){ const b = $('#testBanner'); b.textContent = b.textContent.replace('{tab}', TEST_TAB); b.hidden = false; }
+  if (CONFIG.BANNER){ const b = $('#testBanner'); b.textContent = CONFIG.BANNER; b.hidden = false; }
 
   // ===== Chuẩn hoá dữ liệu =====
   const PLATE_RE = /^\d{2}[A-Z]{1,2}\d{4,6}$/;
