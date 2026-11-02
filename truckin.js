@@ -46,13 +46,14 @@
     return s.trim().replace(/\s+/g, ' ').split(' ').map(w => { const l = w.toLocaleLowerCase('vi'); return l.charAt(0).toLocaleUpperCase('vi') + l.slice(1); }).join(' ');
   }
 
-  // ===== Loại đơn → các ô số phiếu =====
-  // Mỗi loại đơn cần 1 hoặc 2 số phiếu; key là tên gửi lên Apps Script (mỗi key = 1 cột trong Sheet).
+  // ===== Loại đơn → số phiếu =====
+  // Luôn có 2 ô số phiếu. Loại đơn 1 việc: chỉ bắt buộc ô 1. Loại đơn 2 việc (nhập/trả vỏ + lấy hàng): bắt buộc cả 2.
+  // PHIEU chỉ dùng để ghi chú dưới ô: ô đó là phiếu gì.
   const PHIEU = {
-    nhap:   { key: 'phieuNhap',  label: 'Số phiếu nhập hàng' },
-    layCK:  { key: 'phieuLay',   label: 'Số phiếu lấy hàng chuyển kho' },
-    layNPP: { key: 'phieuLay',   label: 'Số phiếu lấy hàng NPP' },
-    traVo:  { key: 'phieuTraVo', label: 'Số phiếu trả vỏ' }
+    nhap:   { label: 'nhập hàng' },
+    layCK:  { label: 'lấy hàng chuyển kho' },
+    layNPP: { label: 'lấy hàng NPP' },
+    traVo:  { label: 'trả vỏ' }
   };
   const ORDER = {
     'Nhập hàng': ['nhap'],
@@ -65,12 +66,11 @@
     'Trả vỏ - lấy hàng NPP': ['traVo', 'layNPP']
   };
   const slotsOf = loai => (ORDER[loai] || []).map(x => PHIEU[x]);
-  const lower1 = s => s.charAt(0).toLocaleLowerCase('vi') + s.slice(1);
 
   // ===== Danh sách trường (theo thứ tự cột file mẫu) =====
   // auto: không có ô nhập, tự ghi theo đồng hồ thực lúc tài xế bấm Gửi (ngày yyyy-mm-dd, giờ 24h HH:MM)
   // opt: không bắt buộc, để trống vẫn gửi được và không tính vào tiến độ
-  // slot: ô số phiếu thứ mấy của loại đơn; chỉ hiện và bắt buộc khi loại đơn cần ô đó
+  // slot: ô số phiếu thứ mấy; ô 1 luôn bắt buộc, ô 2 chỉ bắt buộc khi loại đơn có 2 việc
   const FIELDS = [
     { k: 'ngay', label: 'Ngày', auto: true },
     { k: 'bienSo', label: 'Biển số xe', empty: 'Vui lòng nhập biển số xe.' },
@@ -80,15 +80,15 @@
     { k: 'gioTruckIn', label: 'Giờ truck-in', auto: true },
     { k: 'nhaVanTai', label: 'Nhà vận tải', radio: true, empty: 'Vui lòng chọn nhà vận tải.' },
     { k: 'loaiDon', label: 'Loại đơn hàng', radio: true, empty: 'Vui lòng chọn loại đơn hàng.' },
-    { k: 'phieu1', slot: 0 },
-    { k: 'phieu2', slot: 1 },
+    { k: 'phieu1', label: 'Số phiếu 1', slot: 0 },
+    { k: 'phieu2', label: 'Số phiếu 2', slot: 1 },
     { k: 'soPallet', label: 'Số pallet', empty: 'Vui lòng nhập số lượng pallet (không có thì nhập 0).' }
   ];
   const F = Object.fromEntries(FIELDS.map(f => [f.k, f]));
   const INPUTS = FIELDS.filter(f => !f.auto);
   const slotOf = (f, all) => f.slot === undefined ? null : slotsOf(all.loaiDon)[f.slot] || null;
-  const active = (f, all) => f.slot === undefined || !!slotOf(f, all);
-  const labelOf = (f, all) => f.slot === undefined ? f.label : (slotOf(f, all) || {}).label || '';
+  const required = (f, all) => f.slot === undefined ? !f.opt : f.slot === 0 || slotsOf(all.loaiDon).length > 1;
+  const labelOf = (f, all) => { const s = slotOf(f, all); return f.label + (s ? ' (' + s.label + ')' : ''); };
   const form = $('#regForm');
   const shown = new Set();
   let tried = false;
@@ -105,9 +105,9 @@
 
   function check(k, v, all){
     if (F[k].slot !== undefined){
-      const s = slotOf(F[k], all); if (!s) return '';
-      if (!v) return 'Vui lòng nhập ' + lower1(s.label) + '.';
-      return /^\d{8,10}$/.test(v) ? '' : s.label + ' gồm 8 đến 10 chữ số.';
+      const name = F[k].label.toLocaleLowerCase('vi');
+      if (!v) return required(F[k], all) ? 'Vui lòng nhập ' + name + (F[k].slot ? ' (loại đơn này có 2 phiếu).' : '.') : '';
+      return /^\d{8,10}$/.test(v) ? '' : F[k].label + ' gồm 8 đến 10 chữ số.';
     }
     if (!v) return F[k].opt ? '' : F[k].empty;
     if (k === 'bienSo' && !PLATE_RE.test(v)) return 'Biển số chưa đúng dạng. Ví dụ: 50H12345 hoặc 51D-119.32';
@@ -141,10 +141,9 @@
     dl.innerHTML = '';
     FIELDS.forEach(f => {
       if (skipPlate && f.k === 'bienSo') return;
-      if (!active(f, all)) return;
       const dt = document.createElement('dt'); dt.textContent = labelOf(f, all);
       const dd = document.createElement('dd'); const v = display(f.k, all[f.k]);
-      dd.textContent = v || (f.auto ? 'Tự ghi khi bấm Gửi' : f.opt ? 'Không có' : 'Chưa nhập'); if (!v) dd.className = 'empty';
+      dd.textContent = v || (f.auto ? 'Tự ghi khi bấm Gửi' : required(f, all) ? 'Chưa nhập' : 'Không có'); if (!v) dd.className = 'empty';
       if (v && (/^gio/.test(f.k) || ['phieu1', 'phieu2', 'soDienThoai', 'maContainer', 'soPallet'].includes(f.k))) dd.classList.add('mono');
       dl.append(dt, dd);
     });
@@ -156,20 +155,21 @@
     const w = $('#mWarn'); w.hidden = !warn; w.textContent = warn ? text : '';
   }
 
-  // Hiện/ẩn ô số phiếu theo loại đơn và đặt nhãn. Ô đổi sang loại phiếu khác thì xoá số cũ để không gửi nhầm.
-  function syncSlots(){
-    const slots = slotsOf(val('loaiDon'));
+  // Ghi chú dưới 2 ô số phiếu theo loại đơn; dấu * ở ô 2 chỉ hiện khi loại đơn có 2 việc.
+  function syncSlots(all){
+    const slots = slotsOf(all.loaiDon);
     ['phieu1', 'phieu2'].forEach((k, i) => {
-      const wrap = form.querySelector('[data-field="' + k + '"]'); const s = slots[i]; const label = s ? s.label : '';
-      if (wrap.dataset.label !== label){ $('#' + k).value = ''; shown.delete(k); paint(k, ''); wrap.dataset.label = label; }
-      wrap.hidden = !s; wrap.querySelector('[data-label]').textContent = label;
+      const wrap = form.querySelector('[data-field="' + k + '"]'); const s = slots[i];
+      wrap.querySelector('.req').hidden = !required(F[k], all);
+      wrap.querySelector('[data-hint]').textContent = s ? 'Phiếu ' + s.label + ' · 8 đến 10 chữ số'
+        : i === 0 ? '8 đến 10 chữ số, xem trên chứng từ' : all.loaiDon ? 'Không bắt buộc với loại đơn này' : 'Chỉ bắt buộc khi loại đơn có 2 việc';
     });
   }
 
   function refresh(){
-    syncSlots();
     const all = values(); let ok = 0; const okMap = {};
-    const need = INPUTS.filter(f => !f.opt && active(f, all)); const TOTAL = need.length;
+    syncSlots(all);
+    const need = INPUTS.filter(f => required(f, all)); const TOTAL = need.length;
     INPUTS.forEach(f => { const m = check(f.k, all[f.k], all); okMap[f.k] = !m; if (!m && need.includes(f)) ok++; if (shown.has(f.k)) paint(f.k, m); });
     $$('[data-prog-bar]').forEach(b => { b.style.width = (ok / TOTAL * 100) + '%'; b.classList.toggle('complete', ok === TOTAL); });
     $$('.form-section').forEach(s => s.classList.toggle('done', s.dataset.fields.split(',').every(k => okMap[k])));
@@ -242,12 +242,7 @@
     const btn = $('#confirmSend'); const label = btn.innerHTML;
     btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm" aria-hidden="true"></span> Đang gửi…';
     try {
-      const payload = Object.assign({}, pending, { maDangTai: makeRef(pending), thoiGianGui: new Date().toISOString() });
-      // phieu1/phieu2 → phieuNhap / phieuLay / phieuTraVo theo loại đơn (loại không dùng thì để trống)
-      Object.values(PHIEU).forEach(p => { payload[p.key] = ''; });
-      slotsOf(payload.loaiDon).forEach((s, i) => { payload[s.key] = payload['phieu' + (i + 1)]; });
-      delete payload.phieu1; delete payload.phieu2;
-      if (TEST_TAB) payload.tab = TEST_TAB;
+      const payload = Object.assign({}, pending, { maDangTai: makeRef(pending), thoiGianGui: new Date().toISOString() });      if (TEST_TAB) payload.tab = TEST_TAB;
       const res = await send(payload);
       const m = modal(); if (m) m.hide();
       showSuccess(payload, res.demo);

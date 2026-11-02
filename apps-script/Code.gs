@@ -17,10 +17,9 @@ const COL = {
   gio: 'Giờ vào bãi',
   nhaVanTai: 'Nhà vận tải RPM & FG',
   loaiDon: 'Loại đơn hàng RPM & FG',
-  // Số phiếu theo loại việc; loại đơn không dùng phiếu nào thì ô đó để trống
-  phieuNhap: 'Số phiếu nhập hàng',
-  phieuLay: 'Số phiếu lấy hàng',     // chuyển kho hay NPP xem ở cột Loại đơn hàng
-  phieuTraVo: 'Số phiếu trả vỏ'
+  // Số phiếu 1 luôn có; Số phiếu 2 có khi loại đơn 2 việc (nhập/trả vỏ + lấy hàng). Phiếu nào là gì: xem cột Loại đơn hàng.
+  phieu1: 'Số phiếu 1',
+  phieu2: 'Số phiếu 2'
 };
 
 function doPost(e) {
@@ -59,9 +58,8 @@ function doPost(e) {
     put(COL.nhaVanTai, d.nhaVanTai);
     put(COL.loaiDon, d.loaiDon);
     // định dạng chữ, giữ nguyên số 0 ở đầu
-    put(COL.phieuNhap, String(d.phieuNhap || ''), '@');
-    put(COL.phieuLay, String(d.phieuLay || ''), '@');
-    put(COL.phieuTraVo, String(d.phieuTraVo || ''), '@');
+    put(COL.phieu1, String(d.phieu1 || ''), '@');
+    put(COL.phieu2, String(d.phieu2 || ''), '@');
 
     return ContentService.createTextOutput('ok ' + shift.ca + ' ' + shift.ngay + ' dòng ' + r + ' tab ' + sh.getName());
   } catch (err) {
@@ -136,7 +134,7 @@ function testShifts() {
   ];
   let fail = 0;
   cases.forEach((c, i) => {
-    const payload = { ngay: c[0], gioTruckIn: c[1], bienSo: 'TEST' + (i + 1), taiXe: 'Test', soDienThoai: '0912345678', maContainer: i % 2 ? '' : '0123456', nhaVanTai: 'ADV', loaiDon: 'Trả vỏ - lấy hàng NPP', phieuTraVo: '12345678', phieuLay: '87654321', soPallet: String(i * 3), tab: TEST_SHEET };
+    const payload = { ngay: c[0], gioTruckIn: c[1], bienSo: 'TEST' + (i + 1), taiXe: 'Test', soDienThoai: '0912345678', maContainer: i % 2 ? '' : '0123456', nhaVanTai: 'ADV', loaiDon: 'Trả vỏ - lấy hàng NPP', phieu1: '12345678', phieu2: '87654321', soPallet: String(i * 3), tab: TEST_SHEET };
     const res = doPost({ postData: { contents: JSON.stringify(payload) } }).getContent();
     const m = res.match(/^ok (.+) dòng (\d+) tab /);
     if (!m) { fail++; Logger.log('SAI   ' + c[0] + ' ' + c[1] + ' → ' + res); return; }
