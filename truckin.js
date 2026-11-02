@@ -5,7 +5,7 @@
   // Để trống = chế độ xem thử, form không gửi dữ liệu đi đâu.
   // NHÁNH TEST: ENDPOINT trỏ tới Apps Script của file Sheet thử (để trống = không gửi đi đâu).
   // Khi gộp vào main phải giữ ENDPOINT của main và bỏ BANNER.
-  const CONFIG = { ENDPOINT: '', BANNER: 'BẢN THỬ NGHIỆM: dữ liệu gửi vào file Sheet thử, không dùng để đăng tài thật' };
+  const CONFIG = { ENDPOINT: 'https://script.google.com/macros/s/AKfycbxhezBbvOQxP3S6i3PxIRU3Y6d6wIvTHDGn8baOEwcGCK5Vl0wSGgJqTE2HPfxNiN9ICQ/exec', BANNER: 'BẢN THỬ NGHIỆM: dữ liệu gửi vào file Sheet thử, không dùng để đăng tài thật' };
   // Chế độ thử: mở link kèm ?thu=1 → dữ liệu ghi vào tab DangTai2, không vào bảng thật.
   const TEST_TAB = /[?&]thu=1\b/.test(location.search) ? 'DangTai2' : '';
 
