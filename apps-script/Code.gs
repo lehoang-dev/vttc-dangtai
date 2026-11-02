@@ -6,6 +6,8 @@ const KEY_COL = 'Biển số xe';
 
 // Tên cột ở dòng 1 mà script ghi vào — đổi tên cột trong Sheet thì CHỈ sửa ở đây.
 // Bước kiểm tra và bước ghi đều lấy tên từ đây. Thiếu cột nào thì báo lỗi TRƯỚC khi ghi, không để lại dòng ghi dở.
+// Một cột có thể có nhiều tên [mới, cũ]: script dùng tên nào đang có trong Sheet → đổi tên cột lúc nào cũng được,
+// không làm gián đoạn đăng tài. Khi mọi Sheet đã dùng tên mới thì có thể bỏ tên cũ.
 const COL = {
   ca: 'Ca',
   ngayCa: 'Ngày theo ca',
@@ -15,12 +17,14 @@ const COL = {
   pallet: 'Số pallet',
   sdt: 'Số điện thoại',
   gio: 'Giờ vào bãi',
-  nhaVanTai: 'Nhà vận tải',
-  loaiDon: 'Loại đơn hàng',
+  nhaVanTai: ['Nhà vận tải', 'Nhà vận tải RPM & FG'],
+  loaiDon: ['Loại đơn hàng', 'Loại đơn hàng RPM & FG'],
   // Số phiếu 1 luôn có; Số phiếu 2 có khi loại đơn 2 việc (nhập/trả vỏ + lấy hàng). Phiếu nào là gì: xem cột Loại đơn hàng.
-  phieu1: 'Số phiếu 1',
+  phieu1: ['Số phiếu 1', 'Số SO-ST'],
   phieu2: 'Số phiếu 2'
 };
+// Cột được phép chưa có trong Sheet (thiếu thì bỏ qua, không chặn đăng tài). Chỉ dùng trong lúc chuyển đổi.
+const OPTIONAL = ['phieu2'];
 
 function doPost(e) {
   const lock = LockService.getScriptLock();
@@ -29,37 +33,41 @@ function doPost(e) {
     const d = JSON.parse(e.postData.contents);
     const sh = getSheet_(d.tab === TEST_SHEET ? TEST_SHEET : SHEET_NAME);
     const head = headers_(sh);
-    const col = name => {
-      const i = head.indexOf(name);
-      if (i < 0) throw new Error('Không tìm thấy cột "' + name + '" ở dòng 1, tab "' + sh.getName() + '", file "'
-        + sh.getParent().getName() + '". Dòng 1 đang có: ' + JSON.stringify(head.filter(String)));
-      return i + 1;
-    };
-    Object.values(COL).forEach(col); // kiểm tra đủ cột trước khi ghi
+    // Vị trí cột (1, 2, ...) của từng khoá trong COL; 0 = chưa có trong Sheet
+    const C = {};
+    Object.keys(COL).forEach(k => {
+      const names = [].concat(COL[k]);
+      const i = names.map(n => head.indexOf(n)).find(i => i >= 0);
+      C[k] = i === undefined ? 0 : i + 1;
+      if (!C[k] && !OPTIONAL.includes(k)) // kiểm tra đủ cột trước khi ghi
+        throw new Error('Không tìm thấy cột "' + names.join('" hoặc "') + '" ở dòng 1, tab "' + sh.getName() + '", file "'
+          + sh.getParent().getName() + '". Dòng 1 đang có: ' + JSON.stringify(head.filter(String)));
+    });
 
     const shift = shiftOf_(d.ngay, d.gioTruckIn);
     const tz = sh.getParent().getSpreadsheetTimeZone();
-    const r = nextRow_(sh, col(COL.bienSo));
-    const put = (name, value, format) => {
-      const cell = sh.getRange(r, col(name));
+    const r = nextRow_(sh, C.bienSo);
+    const put = (k, value, format) => {
+      if (!C[k]) return; // cột không bắt buộc và chưa có trong Sheet
+      const cell = sh.getRange(r, C[k]);
       if (format) cell.setNumberFormat(format);
       cell.setValue(value);
     };
 
-    put(COL.ca, shift.ca);
+    put('ca', shift.ca);
     // Tạo ngày theo múi giờ của Sheet để không bị lệch 1 ngày
-    put(COL.ngayCa, Utilities.parseDate(shift.ngay, tz, 'yyyy-MM-dd'), 'dd/mm/yyyy');
-    put(COL.bienSo, d.bienSo);
-    put(COL.container, String(d.maContainer || ''), '@'); // không bắt buộc, để trống nếu xe không chở container
-    put(COL.taiXe, d.taiXe);
-    put(COL.pallet, d.soPallet === undefined || d.soPallet === '' ? '' : Number(d.soPallet));
-    put(COL.sdt, String(d.soDienThoai || ''), '@'); // định dạng chữ, giữ số 0 ở đầu
-    put(COL.gio, d.gioTruckIn);
-    put(COL.nhaVanTai, d.nhaVanTai);
-    put(COL.loaiDon, d.loaiDon);
-    // định dạng chữ, giữ nguyên số 0 ở đầu
-    put(COL.phieu1, String(d.phieu1 || ''), '@');
-    put(COL.phieu2, String(d.phieu2 || ''), '@');
+    put('ngayCa', Utilities.parseDate(shift.ngay, tz, 'yyyy-MM-dd'), 'dd/mm/yyyy');
+    put('bienSo', d.bienSo);
+    put('container', String(d.maContainer || ''), '@'); // không bắt buộc, để trống nếu xe không chở container
+    put('taiXe', d.taiXe);
+    put('pallet', d.soPallet === undefined || d.soPallet === '' ? '' : Number(d.soPallet));
+    put('sdt', String(d.soDienThoai || ''), '@'); // định dạng chữ, giữ số 0 ở đầu
+    put('gio', d.gioTruckIn);
+    put('nhaVanTai', d.nhaVanTai);
+    put('loaiDon', d.loaiDon);
+    // định dạng chữ, giữ nguyên số 0 ở đầu. Form cũ gửi soSO → ghi vào ô số phiếu 1.
+    put('phieu1', String(d.phieu1 || d.soSO || ''), '@');
+    put('phieu2', String(d.phieu2 || ''), '@');
 
     return ContentService.createTextOutput('ok ' + shift.ca + ' ' + shift.ngay + ' dòng ' + r + ' tab ' + sh.getName());
   } catch (err) {
@@ -113,11 +121,12 @@ function shiftOf_(ngay, gio) {
 }
 
 // Thử chia ca + số thứ tự bằng giờ giả. Chạy trong trình soạn thảo, không qua Web App.
-// Ghi vào tab thử nghiệm DangTai2, không đụng dữ liệu thật. Tự xoá dòng thử cũ trước khi chạy.
-// STT đọc lại từ chính cột STT2 sau khi công thức tính xong, nên kiểm tra được cả công thức.
+// Ghi vào tab DangTai2 nếu file có tab đó, không thì ghi vào DangTai (ngày năm 2000, không lẫn với xe thật).
+// Tự xoá dòng thử cũ trước khi chạy. STT đọc lại từ chính cột STT2 sau khi công thức tính xong.
 function testShifts() {
   xoaTest();
-  const sh = getSheet_(TEST_SHEET);
+  const tab = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(TEST_SHEET) ? TEST_SHEET : SHEET_NAME;
+  const sh = getSheet_(tab);
   // STT2 do công thức ở A1 tự tính; script không ghi vào cột này (ghi vào sẽ làm cả cột #REF!)
   const sttCol = headers_(sh).indexOf('STT2') + 1;
   if (!sttCol) throw new Error('Không thấy cột "STT2" ở dòng 1. Nếu A1 đang #REF!: chọn A2 đến cuối cột, bấm Delete.');
@@ -134,7 +143,7 @@ function testShifts() {
   ];
   let fail = 0;
   cases.forEach((c, i) => {
-    const payload = { ngay: c[0], gioTruckIn: c[1], bienSo: 'TEST' + (i + 1), taiXe: 'Test', soDienThoai: '0912345678', maContainer: i % 2 ? '' : '0123456', nhaVanTai: 'ADV', loaiDon: 'Trả vỏ - lấy hàng NPP', phieu1: '12345678', phieu2: '87654321', soPallet: String(i * 3), tab: TEST_SHEET };
+    const payload = { ngay: c[0], gioTruckIn: c[1], bienSo: 'TEST' + (i + 1), taiXe: 'Test', soDienThoai: '0912345678', maContainer: i % 2 ? '' : '0123456', nhaVanTai: 'ADV', loaiDon: 'Trả vỏ - lấy hàng NPP', phieu1: '12345678', phieu2: '87654321', soPallet: String(i * 3), tab: tab };
     const res = doPost({ postData: { contents: JSON.stringify(payload) } }).getContent();
     const m = res.match(/^ok (.+) dòng (\d+) tab /);
     if (!m) { fail++; Logger.log('SAI   ' + c[0] + ' ' + c[1] + ' → ' + res); return; }
