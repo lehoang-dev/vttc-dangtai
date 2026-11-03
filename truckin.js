@@ -6,7 +6,7 @@
   // ĐÂY LÀ DÒNG DUY NHẤT KHÁC NHAU GIỮA 2 NHÁNH. Gộp test → main thì giữ nguyên dòng này của main:
   //   main: link Apps Script file thật, TAB '', BANNER ''
   //   test: link Apps Script file thử, TAB 'DangTai2', BANNER 'BẢN THỬ NGHIỆM…'
-  const CONFIG = { ENDPOINT: 'https://script.google.com/macros/s/AKfycbz16gNy0npNtsdOjg3RgLHMS-qpgM_HMV3k8ochx2LEYZReuOWK2grpu4b9gIucAXYf/exec', TAB: '', BANNER: '' };
+  const CONFIG = { ENDPOINT: 'https://script.google.com/macros/s/AKfycbxhezBbvOQxP3S6i3PxIRU3Y6d6wIvTHDGn8baOEwcGCK5Vl0wSGgJqTE2HPfxNiN9ICQ/exec', TAB: 'DangTai2', BANNER: 'BẢN THỬ NGHIỆM: dữ liệu gửi vào file Sheet thử, không dùng để đăng tài thật' };
 
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
