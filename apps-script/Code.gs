@@ -79,8 +79,50 @@ function doPost(e) {
 }
 
 // Mở link /exec trên trình duyệt: thấy dòng này là web app đang chạy bản mới.
-function doGet() {
-  return ContentService.createTextOutput('OK - DangTai endpoint đang chạy');
+// Có ?key=... → trả các xe mới nhất cho trang theo dõi (theo-doi/), chỉ khi đúng mã theo dõi.
+function doGet(e) {
+  const p = (e && e.parameter) || {};
+  if (!p.key) return ContentService.createTextOutput('OK - DangTai endpoint đang chạy');
+  let out;
+  try { out = theoDoi_(p); } catch (err) { console.error(err); out = { ok: false, error: String(err) }; }
+  return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
+}
+
+// ===== Trang theo dõi =====
+// Mã theo dõi lưu trong Thuộc tính tập lệnh (không nằm trong code/GitHub). Chạy datMaTheoDoi một lần để tạo mã.
+function datMaTheoDoi() {
+  const key = Utilities.getUuid().replace(/-/g, '').slice(0, 12);
+  PropertiesService.getScriptProperties().setProperty('THEO_DOI_KEY', key);
+  Logger.log('Mã theo dõi mới: ' + key + '  (nhập mã này vào trang theo dõi; mã cũ hết hiệu lực)');
+}
+
+// Trả tối đa n xe cuối cùng (mặc định 30) của tab, đọc theo tên cột như doPost.
+function theoDoi_(p) {
+  const key = PropertiesService.getScriptProperties().getProperty('THEO_DOI_KEY');
+  if (!key) return { ok: false, error: 'Chưa có mã theo dõi. Trong Apps Script, chạy hàm datMaTheoDoi.' };
+  if (p.key !== key) return { ok: false, error: 'Sai mã theo dõi.' };
+  const sh = getSheet_(p.tab === TEST_SHEET ? TEST_SHEET : SHEET_NAME);
+  const ss = sh.getParent();
+  const head = headers_(sh);
+  const at = names => { for (const n of [].concat(names)) { const i = head.indexOf(n); if (i >= 0) return i; } return -1; };
+  const info = { ok: true, file: ss.getName(), tab: sh.getName(), url: ss.getUrl() + '#gid=' + sh.getSheetId(), rows: [] };
+  const keyIdx = at(KEY_COL);
+  if (keyIdx < 0) return Object.assign(info, { ok: false, error: 'Không tìm thấy cột "' + KEY_COL + '"' });
+  const last = nextRow_(sh, keyIdx + 1) - 1;
+  if (last < 2) return info;
+  const n = Math.min(Math.max(Number(p.n) || 30, 1), 100);
+  const from = Math.max(2, last - n + 1);
+  const vals = sh.getRange(from, 1, last - from + 1, head.length).getDisplayValues();
+  const F = { stt: 'STT2', ca: COL.ca, ngay: COL.ngayCa, bienSo: COL.bienSo, container: COL.container, taiXe: COL.taiXe,
+              pallet: COL.pallet, sdt: COL.sdt, gio: COL.gio, nhaVanTai: COL.nhaVanTai, loaiDon: COL.loaiDon,
+              phieu1: COL.phieu1, phieu2: COL.phieu2, nhap: 'Nhập', xuat: 'Xuất' };
+  const idx = {}; Object.keys(F).forEach(k => { idx[k] = at(F[k]); });
+  info.rows = vals.map((v, i) => {
+    const r = { row: from + i };
+    Object.keys(idx).forEach(k => { r[k] = idx[k] >= 0 ? String(v[idx[k]]).trim() : ''; });
+    return r;
+  }).filter(r => r.bienSo);
+  return info;
 }
 
 function getSheet_(name) {

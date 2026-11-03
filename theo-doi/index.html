@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#d6002f">
+<title>Theo dõi đăng tài – VTTC</title>
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Trang theo dõi: đọc các xe mới nhất từ Apps Script, báo bằng thông báo Windows + tiếng "ting".
+   Cùng bảng màu với form đăng tài (đỏ Viettel, xanh TTC). */
+:root{
+  --bg:#f3f4f6; --surface:#fff; --surface-2:#f5f6f8; --fg:#1a1d24; --muted:#5d6472; --line:#dcdfe5;
+  --brand:#d6002f; --brand-soft:#fdebef; --partner:#1d3c84; --partner-soft:#e8eef9; --accent:#f39a1f;
+  --ok:#1d7a4f; --ok-soft:#e3f3ea; --danger:#b42318; --danger-soft:#fdecea;
+  --n:#1d3c84; --n-soft:#e8eef9; --rpm:#8a4b00; --rpm-soft:#fff1dc; --x:#1d7a4f; --x-soft:#e3f3ea;
+  --f-body:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){ :root{
+  --bg:#121317; --surface:#1b1d23; --surface-2:#22252c; --fg:#e8e9ec; --muted:#a0a6b2; --line:#30343d;
+  --brand:#ff5c78; --brand-soft:#3a1720; --partner:#8eaaf0; --partner-soft:#1c2740; --accent:#f5a83a;
+  --ok:#5fd29a; --ok-soft:#143327; --danger:#ff8a7f; --danger-soft:#3a1a18;
+  --n:#8eaaf0; --n-soft:#1c2740; --rpm:#f5b35a; --rpm-soft:#3a2a12; --x:#5fd29a; --x-soft:#143327; } }
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);-webkit-font-smoothing:antialiased}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+button,input{font:inherit}
+.wrap{max-width:1100px;margin:0 auto;padding:0 16px}
+
+header{background:#d6002f;color:#fff;position:relative;padding:14px 0 18px}
+header::after{content:"";position:absolute;inset:auto 0 0 0;height:5px;background:linear-gradient(90deg,#1d3c84 0 82%,#f39a1f 82% 100%)}
+.head{display:flex;align-items:center;gap:14px}
+.logo{width:48px;height:48px;border-radius:12px;background:#fff;overflow:hidden;flex:none}
+.logo img{width:100%;height:100%;object-fit:cover;transform:scale(1.3)}
+.head h1{margin:0;font-size:1.25rem}
+.head .sub{font-size:.8rem;opacity:.85}
+.head .grow{flex:1;min-width:0}
+.pill{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.16);border-radius:999px;padding:6px 12px;font-size:.82rem;font-weight:600;white-space:nowrap}
+.dot{width:9px;height:9px;border-radius:50%;background:#bbb}
+.pill.live .dot{background:#5fe39b;box-shadow:0 0 0 0 rgba(95,227,155,.7);animation:pulse 2s infinite}
+.pill.err .dot{background:#ffb4a8}
+@keyframes pulse{70%{box-shadow:0 0 0 8px rgba(95,227,155,0)}100%{box-shadow:0 0 0 0 rgba(95,227,155,0)}}
+@media (prefers-reduced-motion:reduce){.pill.live .dot{animation:none}}
+
+main{padding:20px 0 40px;display:grid;gap:16px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:18px}
+.card h2{margin:0 0 6px;font-size:1.05rem}
+.card p{margin:0 0 12px;color:var(--muted);font-size:.9rem}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+input[type=password],input[type=text]{flex:1;min-width:200px;height:46px;border:1.5px solid var(--line);border-radius:10px;padding:0 12px;background:var(--surface-2);color:var(--fg)}
+input:focus{outline:2px solid var(--brand);outline-offset:1px}
+.btn{height:46px;border-radius:10px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);font-weight:600;padding:0 16px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none;font-size:.92rem}
+.btn:hover{border-color:var(--brand);color:var(--brand)}
+.btn.primary{background:var(--brand);border-color:var(--brand);color:#fff}
+.btn.primary:hover{filter:brightness(.92);color:#fff}
+.btn.small{height:38px;padding:0 12px;font-size:.85rem}
+.btn[aria-pressed=false]{color:var(--muted)}
+.msg{font-size:.85rem;margin-top:10px}
+.msg.err{color:var(--danger)} .msg.ok{color:var(--ok)}
+.warn{background:var(--danger-soft);border-color:transparent}
+.warn p{color:var(--fg)}
+
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+.bar .meta{color:var(--muted);font-size:.85rem}
+.bar .meta b{color:var(--fg)}
+
+.list{display:grid;gap:10px}
+.item{display:grid;grid-template-columns:72px minmax(0,1fr) auto;gap:4px 16px;align-items:center;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;transition:background-color 1s,border-color 1s}
+.item.new{background:var(--brand-soft);border-color:var(--brand)}
+.time{font-family:var(--f-mono);font-weight:700;font-size:1.2rem;grid-row:span 2}
+.time small{display:block;font-family:var(--f-body);font-weight:500;font-size:.72rem;color:var(--muted)}
+.l1{display:flex;flex-wrap:wrap;align-items:center;gap:8px 12px;min-width:0}
+.plate{font-family:var(--f-mono);font-weight:700;font-size:1.05rem;border:2px solid #111;border-radius:6px;padding:1px 8px;background:#fff;color:#111;letter-spacing:.04em}
+.cont{font-family:var(--f-mono);font-size:.85rem;color:var(--muted)}
+.carrier{font-weight:700}
+.l2{color:var(--muted);font-size:.86rem;min-width:0;overflow-wrap:anywhere}
+.l2 b{color:var(--fg);font-weight:600}
+.tags{display:flex;gap:6px;grid-row:span 2;justify-content:flex-end;flex-wrap:wrap}
+.tag{font-family:var(--f-mono);font-weight:700;font-size:.95rem;border-radius:8px;padding:4px 10px}
+.tag.n{background:var(--n-soft);color:var(--n)} .tag.rpm{background:var(--rpm-soft);color:var(--rpm)} .tag.x{background:var(--x-soft);color:var(--x)}
+.empty{text-align:center;color:var(--muted);padding:30px 0}
+@media (max-width:600px){
+  .item{grid-template-columns:60px minmax(0,1fr)}
+  .tags{grid-row:auto;grid-column:2;justify-content:flex-start}
+  .time{grid-row:span 3}
+  .pill{display:none}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap head">
+    <div class="logo"><img src="../logo-vttc.png" alt=""></div>
+    <div class="grow">
+      <h1>Theo dõi xe đăng tài</h1>
+      <div class="sub" id="source">Chưa kết nối</div>
+    </div>
+    <div class="pill" id="pill"><span class="dot"></span><span id="pillText">Chưa bật</span></div>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="card" id="setup" hidden>
+    <h2>Bật theo dõi</h2>
+    <p>Nhập mã theo dõi (lấy trong Apps Script, hàm <b>datMaTheoDoi</b>). Mã chỉ lưu trên máy này.</p>
+    <form class="row" id="setupForm">
+      <input type="password" id="keyInput" placeholder="Mã theo dõi" autocomplete="off" required>
+      <button class="btn primary" type="submit">Bật theo dõi</button>
+    </form>
+    <div class="msg" id="setupMsg"></div>
+  </section>
+
+  <section class="card warn" id="permWarn" hidden>
+    <h2>Chưa được phép hiện thông báo</h2>
+    <p id="permText">Bấm nút dưới, rồi chọn <b>Cho phép</b> khi Chrome hỏi.</p>
+    <button class="btn primary" id="permBtn" type="button">Cho phép thông báo</button>
+  </section>
+
+  <section class="bar" id="bar" hidden>
+    <div class="meta" id="meta">—</div>
+    <div class="row">
+      <button class="btn small" id="soundBtn" type="button" aria-pressed="true">🔔 Âm thanh: bật</button>
+      <button class="btn small" id="testBtn" type="button">Thử thông báo</button>
+      <a class="btn small" id="sheetLink" href="#" target="_blank" rel="noopener">Mở Google Sheet</a>
+      <button class="btn small" id="resetBtn" type="button">Đổi mã</button>
+    </div>
+  </section>
+
+  <section class="list" id="list" aria-live="polite"></section>
+</main>
+
+<script>
+(function(){
+  'use strict';
+  // ===== Cấu hình =====
+  // ENDPOINT: link Apps Script của file Sheet (cùng link với form). TAB: tab cần theo dõi ('' = DangTai).
+  const CONFIG = { ENDPOINT: 'https://script.google.com/macros/s/AKfycbz16gNy0npNtsdOjg3RgLHMS-qpgM_HMV3k8ochx2LEYZReuOWK2grpu4b9gIucAXYf/exec', TAB: 'DangTai2' };
+  const POLL_MS = 15000;     // hỏi Apps Script mỗi 15 giây
+  const SHOW = 30;           // số xe gần nhất hiển thị
+  const MAX_SINGLE = 3;      // quá 3 xe mới cùng lúc → gộp 1 thông báo
+
+  const $ = s => document.querySelector(s);
+  const store = {
+    get(k, d){ try { const v = localStorage.getItem('vttc-td-' + k); return v === null ? d : v; } catch (_) { return d; } },
+    set(k, v){ try { localStorage.setItem('vttc-td-' + k, v); } catch (_) {} },
+    del(k){ try { localStorage.removeItem('vttc-td-' + k); } catch (_) {} }
+  };
+  const pad = n => String(n).padStart(2, '0');
+  const now = () => { const d = new Date(); return pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds()); };
+  function fmtPlate(p){
+    p = String(p || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const m = p.match(/^(\d{2}[A-Z]{1,2})(\d+)$/); if (!m) return p;
+    let pre = m[1], num = m[2];
+    if (num.length === 6){ pre += num[0]; num = num.slice(1); }
+    return pre + '-' + (num.length === 5 ? num.slice(0, 3) + '.' + num.slice(3) : num);
+  }
+  const idOf = r => [r.ngay, r.gio, r.bienSo, r.taiXe].join('|');
+  const tagsOf = r => [r.nhap, r.xuat].filter(Boolean);
+
+  let key = store.get('key', '');
+  let sound = store.get('sound', '1') === '1';
+  let seen = null;             // Set id các xe đã thấy; null = chưa tải lần đầu (lần đầu không báo)
+  let sheetUrl = '';
+  let unread = 0;
+  let audio = null;
+
+  // ===== Âm thanh "ting" (tự tạo, không cần file) =====
+  function unlockAudio(){ try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') audio.resume(); } catch (_) {} }
+  function ting(){
+    if (!sound || !audio) return;
+    try {
+      const t = audio.currentTime;
+      [[880, 0], [1320, 0.14]].forEach(([f, d]) => {
+        const o = audio.createOscillator(), g = audio.createGain();
+        o.type = 'sine'; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.35, t + d + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.5);
+        o.connect(g).connect(audio.destination); o.start(t + d); o.stop(t + d + 0.55);
+      });
+    } catch (_) {}
+  }
+
+  // ===== Thông báo Windows =====
+  function notify(title, body, tag){
+    if (!('Notification' in window) || Notification.permission !== 'granted') return;
+    try {
+      const n = new Notification(title, { body, tag, icon: 'icon-192.png', badge: 'icon-192.png' });
+      n.onclick = () => { window.focus(); if (sheetUrl) window.open(sheetUrl, '_blank', 'noopener'); n.close(); };
+    } catch (_) {
+      if (navigator.serviceWorker) navigator.serviceWorker.ready.then(reg => reg.showNotification(title, { body, tag, icon: 'icon-192.png', data: { url: sheetUrl } })).catch(() => {});
+    }
+  }
+  function notifyRows(rows){
+    if (!rows.length) return;
+    if (rows.length > MAX_SINGLE){
+      notify('🚚 ' + rows.length + ' xe mới đăng tài', rows.map(r => fmtPlate(r.bienSo) + ' · ' + r.loaiDon).join('\n'), 'nhieu-xe');
+    } else {
+      rows.forEach(r => notify('🚚 ' + fmtPlate(r.bienSo) + ' · ' + r.nhaVanTai,
+        r.loaiDon + (tagsOf(r).length ? ' · ' + tagsOf(r).join(' / ') : '') + '\n' + r.gio + ' · ' + r.taiXe, idOf(r)));
+    }
+    ting();
+    if (document.hidden){ unread += rows.length; document.title = '(' + unread + ') Theo dõi đăng tài – VTTC'; }
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden){ unread = 0; document.title = 'Theo dõi đăng tài – VTTC'; } });
+
+  // ===== Giao diện =====
+  function setPill(state, text){ const p = $('#pill'); p.className = 'pill ' + state; $('#pillText').textContent = text; }
+  function el(tag, cls, text){ const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+  function render(rows, freshIds){
+    const list = $('#list'); list.innerHTML = '';
+    if (!rows.length){ list.append(el('div', 'empty', 'Chưa có xe nào trong tab này.')); return; }
+    rows.slice().reverse().forEach(r => {
+      const it = el('article', 'item' + (freshIds.has(idOf(r)) ? ' new' : ''));
+      const t = el('div', 'time', r.gio); t.append(el('small', '', [r.ca, r.ngay].filter(Boolean).join(' · ')));
+      const l1 = el('div', 'l1');
+      l1.append(el('span', 'plate', fmtPlate(r.bienSo)));
+      if (r.container) l1.append(el('span', 'cont', '+ ' + fmtPlate(r.container)));
+      l1.append(el('span', 'carrier', r.nhaVanTai));
+      const l2 = el('div', 'l2'); l2.append(el('b', '', r.loaiDon));
+      l2.append(document.createTextNode(' · ' + [r.taiXe, r.sdt, r.pallet !== '' ? r.pallet + ' pallet' : ''].filter(Boolean).join(' · ')));
+      const tags = el('div', 'tags');
+      tagsOf(r).forEach(v => tags.append(el('span', 'tag ' + (/^RPM/i.test(v) ? 'rpm' : /^X/i.test(v) ? 'x' : 'n'), v)));
+      it.append(t, l1, tags, l2);
+      list.append(it);
+    });
+    if (freshIds.size) setTimeout(() => document.querySelectorAll('.item.new').forEach(e => e.classList.remove('new')), 60000);
+  }
+  function showPerm(){
+    const ok = 'Notification' in window && Notification.permission === 'granted';
+    $('#permWarn').hidden = ok || !key;
+    if ('Notification' in window && Notification.permission === 'denied')
+      $('#permText').innerHTML = 'Chrome đang <b>chặn</b> thông báo của trang này. Bấm biểu tượng ổ khoá cạnh địa chỉ trang → <b>Thông báo</b> → <b>Cho phép</b>, rồi tải lại trang.';
+  }
+  function updateSoundBtn(){ const b = $('#soundBtn'); b.setAttribute('aria-pressed', String(sound)); b.textContent = sound ? '🔔 Âm thanh: bật' : '🔕 Âm thanh: tắt'; }
+
+  // ===== Hỏi Apps Script =====
+  let busy = false;
+  async function poll(){
+    if (!key || busy) return; busy = true;
+    try {
+      const url = CONFIG.ENDPOINT + '?key=' + encodeURIComponent(key) + '&tab=' + encodeURIComponent(CONFIG.TAB) + '&n=' + SHOW + '&_=' + Date.now();
+      const res = await fetch(url, { cache: 'no-store' });
+      const data = await res.json();
+      if (!data.ok){
+        setPill('err', 'Lỗi');
+        $('#meta').textContent = data.error || 'Lỗi không rõ';
+        if (/mã theo dõi/i.test(data.error || '') && seen === null){ $('#setup').hidden = false; $('#setupMsg').className = 'msg err'; $('#setupMsg').textContent = data.error; $('#bar').hidden = true; }
+        return;
+      }
+      sheetUrl = data.url; $('#sheetLink').href = data.url;
+      $('#source').textContent = 'Tab ' + data.tab + ' · ' + data.file;
+      $('#setup').hidden = true; $('#bar').hidden = false;
+      const fresh = new Set();
+      if (seen === null){ seen = new Set(data.rows.map(idOf)); }
+      else {
+        const news = data.rows.filter(r => !seen.has(idOf(r)));
+        news.forEach(r => { seen.add(idOf(r)); fresh.add(idOf(r)); });
+        notifyRows(news);
+      }
+      render(data.rows, fresh);
+      setPill('live', 'Đang theo dõi');
+      $('#meta').innerHTML = '';
+      $('#meta').append('Kiểm tra lần cuối ', el('b', 'mono', now()), ' · mỗi ' + POLL_MS / 1000 + ' giây · ' + data.rows.length + ' xe gần nhất');
+    } catch (err) {
+      setPill('err', 'Mất kết nối');
+      $('#meta').textContent = 'Không kết nối được Apps Script (' + now() + '). Sẽ thử lại.';
+    } finally { busy = false; }
+  }
+
+  // Đếm giờ bằng Web Worker: tab bị ẩn/thu nhỏ vẫn hỏi đều, không bị Chrome làm chậm như setInterval thường.
+  function startTimer(){
+    try {
+      const w = new Worker(URL.createObjectURL(new Blob(['setInterval(()=>postMessage(0),' + POLL_MS + ')'], { type: 'text/javascript' })));
+      w.onmessage = poll;
+    } catch (_) { setInterval(poll, POLL_MS); }
+  }
+
+  // ===== Sự kiện =====
+  $('#setupForm').addEventListener('submit', async e => {
+    e.preventDefault();
+    key = $('#keyInput').value.trim(); if (!key) return;
+    store.set('key', key); seen = null; unlockAudio();
+    if ('Notification' in window && Notification.permission === 'default') await Notification.requestPermission();
+    showPerm(); $('#setupMsg').textContent = ''; poll();
+  });
+  $('#permBtn').addEventListener('click', async () => { unlockAudio(); if ('Notification' in window) await Notification.requestPermission(); showPerm(); });
+  $('#soundBtn').addEventListener('click', () => { sound = !sound; store.set('sound', sound ? '1' : '0'); unlockAudio(); updateSoundBtn(); if (sound) ting(); });
+  $('#testBtn').addEventListener('click', () => {
+    unlockAudio();
+    notify('🚚 51D-119.32 · Châu Hà', 'Trả vỏ - lấy hàng NPP · RPM2 / X3\n14:35 · Nguyễn Văn An (thông báo thử)', 'thu');
+    ting(); showPerm();
+  });
+  $('#resetBtn').addEventListener('click', () => { store.del('key'); key = ''; seen = null; $('#setup').hidden = false; $('#bar').hidden = true; $('#list').innerHTML = ''; setPill('', 'Chưa bật'); $('#keyInput').focus(); });
+  // Trình duyệt chỉ cho phát tiếng sau khi người dùng bấm vào trang ít nhất một lần
+  document.addEventListener('pointerdown', unlockAudio, { once: true });
+
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
+  updateSoundBtn();
+  if (!key){ $('#setup').hidden = false; } else { poll(); }
+  showPerm();
+  startTimer();
+})();
+</script>
+</body>
+</html>
