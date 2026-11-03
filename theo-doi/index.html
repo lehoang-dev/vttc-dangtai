@@ -203,7 +203,6 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
     showVoiceWarn();
   }
   if (tts){ pickVoice(); tts.onvoiceschanged = pickVoice; }
-  const plateWords = p => fmtPlate(p).replace(/[-.]/g, ' ');   // "51D-119.32" → "51D 119 32"
   function say(text){
     if (!voiceOn || !tts || !viVoice) return false;
     const u = new SpeechSynthesisUtterance(text);
@@ -211,7 +210,8 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
     tts.speak(u);
     return true;
   }
-  const speechOf = r => 'Xe ' + plateWords(r.bienSo) + (r.nhaVanTai ? ', ' + r.nhaVanTai : '') + (r.loaiDon ? ', ' + r.loaiDon.replace(/ - /g, ', ') : '');
+  // Câu đọc ngắn: "Xe 50H12345 vào Nhập hàng - lấy hàng NPP"
+  const speechOf = r => 'Xe ' + String(r.bienSo || '').toUpperCase().replace(/[^A-Z0-9]/g, '') + (r.loaiDon ? ' vào ' + r.loaiDon : '');
 
   // ===== Thông báo Windows =====
   function notify(title, body, tag){
@@ -272,13 +272,18 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
   function showVoiceWarn(){ const w = $('#voiceWarn'); if (w) w.hidden = !(voiceOn && key && tts && tts.getVoices().length && !viVoice); }
 
   // ===== Hỏi Apps Script =====
-  let busy = false;
+  // gen tăng mỗi khi đổi mã: kết quả của lượt hỏi với mã cũ bị bỏ.
+  // Đang hỏi dở mà có lượt mới → chạy lại ngay sau đó (không bỏ lượt, kẻo xe đến lúc đó bị coi là xe có sẵn).
+  let busy = false, again = false, gen = 0;
   async function poll(){
-    if (!key || busy) return; busy = true;
+    if (!key) return;
+    if (busy){ again = true; return; }
+    busy = true; const g = gen;
     try {
       const url = CONFIG.ENDPOINT + '?key=' + encodeURIComponent(key) + '&tab=' + encodeURIComponent(CONFIG.TAB) + '&n=' + SHOW + '&_=' + Date.now();
       const res = await fetch(url, { cache: 'no-store' });
       const data = await res.json();
+      if (g !== gen) return;
       if (!data.ok){
         setPill('err', 'Lỗi');
         $('#meta').textContent = data.error || 'Lỗi không rõ';
@@ -300,9 +305,13 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
       $('#meta').innerHTML = '';
       $('#meta').append('Kiểm tra lần cuối ', el('b', 'mono', now()), ' · mỗi ' + POLL_MS / 1000 + ' giây · ' + data.rows.length + ' xe gần nhất');
     } catch (err) {
+      if (g !== gen) return;
       setPill('err', 'Mất kết nối');
       $('#meta').textContent = 'Không kết nối được Apps Script (' + now() + '). Sẽ thử lại.';
-    } finally { busy = false; }
+    } finally {
+      busy = false;
+      if (again){ again = false; poll(); }
+    }
   }
 
   // Đếm giờ bằng Web Worker: tab bị ẩn/thu nhỏ vẫn hỏi đều, không bị Chrome làm chậm như setInterval thường.
@@ -317,7 +326,7 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
   $('#setupForm').addEventListener('submit', async e => {
     e.preventDefault();
     key = $('#keyInput').value.trim(); if (!key) return;
-    store.set('key', key); seen = null; unlockAudio();
+    store.set('key', key); seen = null; gen++; unlockAudio();
     if ('Notification' in window && Notification.permission === 'default') await Notification.requestPermission();
     showPerm(); $('#setupMsg').textContent = ''; poll();
   });
@@ -333,7 +342,7 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
     notify('🚚 51D-119.32 · Châu Hà', 'Trả vỏ - lấy hàng NPP · RPM2 / X3\n14:35 · Nguyễn Văn An (thông báo thử)', 'thu');
     ting(); setTimeout(() => say(speechOf(r)), 700); showPerm();
   });
-  $('#resetBtn').addEventListener('click', () => { store.del('key'); key = ''; seen = null; $('#setup').hidden = false; $('#bar').hidden = true; $('#list').innerHTML = ''; setPill('', 'Chưa bật'); $('#keyInput').focus(); });
+  $('#resetBtn').addEventListener('click', () => { store.del('key'); key = ''; seen = null; gen++; $('#setup').hidden = false; $('#bar').hidden = true; $('#list').innerHTML = ''; setPill('', 'Chưa bật'); $('#keyInput').focus(); });
   // Trình duyệt chỉ cho phát tiếng sau khi người dùng bấm vào trang ít nhất một lần
   document.addEventListener('pointerdown', unlockAudio, { once: true });
 
