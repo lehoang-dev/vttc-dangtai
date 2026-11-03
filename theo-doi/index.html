@@ -121,10 +121,16 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
     <button class="btn primary" id="permBtn" type="button">Cho phép thông báo</button>
   </section>
 
+  <section class="card warn" id="voiceWarn" hidden>
+    <h2>Máy chưa có giọng đọc tiếng Việt</h2>
+    <p>Trang vẫn báo bằng popup và tiếng "ting", nhưng chưa đọc được thành tiếng. Cách nhanh nhất: mở trang này bằng <b>Microsoft Edge</b> (có sẵn giọng HoàiMy, NamMinh). Hoặc trên Windows: <b>Cài đặt → Thời gian &amp; ngôn ngữ → Giọng nói → Thêm giọng nói → Tiếng Việt</b>, rồi khởi động lại trình duyệt.</p>
+  </section>
+
   <section class="bar" id="bar" hidden>
     <div class="meta" id="meta">—</div>
     <div class="row">
       <button class="btn small" id="soundBtn" type="button" aria-pressed="true">🔔 Âm thanh: bật</button>
+      <button class="btn small" id="voiceBtn" type="button" aria-pressed="true">🗣 Giọng nói: bật</button>
       <button class="btn small" id="testBtn" type="button">Thử thông báo</button>
       <a class="btn small" id="sheetLink" href="#" target="_blank" rel="noopener">Mở Google Sheet</a>
       <button class="btn small" id="resetBtn" type="button">Đổi mã</button>
@@ -164,6 +170,8 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
 
   let key = store.get('key', '');
   let sound = store.get('sound', '1') === '1';
+  let voiceOn = store.get('voice', '1') === '1';
+  let viVoice = null;          // giọng tiếng Việt tốt nhất trên máy; null = không có
   let seen = null;             // Set id các xe đã thấy; null = chưa tải lần đầu (lần đầu không báo)
   let sheetUrl = '';
   let unread = 0;
@@ -184,6 +192,27 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
     } catch (_) {}
   }
 
+  // ===== Giọng nói (đọc thành tiếng bằng giọng tiếng Việt có trên máy) =====
+  const tts = window.speechSynthesis;
+  function pickVoice(){
+    if (!tts) return;
+    const vi = tts.getVoices().filter(v => /^vi/i.test(v.lang));
+    // Ưu tiên giọng tự nhiên của Edge (HoaiMy/NamMinh), rồi giọng Google, rồi giọng Windows (An)
+    const score = v => (/natural|online/i.test(v.name) ? 4 : 0) + (/hoaimy/i.test(v.name) ? 2 : 0) + (/google/i.test(v.name) ? 1 : 0);
+    viVoice = vi.sort((a, b) => score(b) - score(a))[0] || null;
+    showVoiceWarn();
+  }
+  if (tts){ pickVoice(); tts.onvoiceschanged = pickVoice; }
+  const plateWords = p => fmtPlate(p).replace(/[-.]/g, ' ');   // "51D-119.32" → "51D 119 32"
+  function say(text){
+    if (!voiceOn || !tts || !viVoice) return false;
+    const u = new SpeechSynthesisUtterance(text);
+    u.voice = viVoice; u.lang = viVoice.lang; u.rate = 0.95;
+    tts.speak(u);
+    return true;
+  }
+  const speechOf = r => 'Xe ' + plateWords(r.bienSo) + (r.nhaVanTai ? ', ' + r.nhaVanTai : '') + (r.loaiDon ? ', ' + r.loaiDon.replace(/ - /g, ', ') : '');
+
   // ===== Thông báo Windows =====
   function notify(title, body, tag){
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
@@ -203,6 +232,8 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
         r.loaiDon + (tagsOf(r).length ? ' · ' + tagsOf(r).join(' / ') : '') + '\n' + r.gio + ' · ' + r.taiXe, idOf(r)));
     }
     ting();
+    // Đọc sau tiếng "ting" một chút; nhiều xe cùng lúc thì chỉ đọc số lượng
+    setTimeout(() => say(rows.length > MAX_SINGLE ? 'Có ' + rows.length + ' xe mới đăng tài' : rows.map(speechOf).join('. ')), 700);
     if (document.hidden){ unread += rows.length; document.title = '(' + unread + ') Theo dõi đăng tài – VTTC'; }
   }
   document.addEventListener('visibilitychange', () => { if (!document.hidden){ unread = 0; document.title = 'Theo dõi đăng tài – VTTC'; } });
@@ -236,6 +267,9 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
       $('#permText').innerHTML = 'Chrome đang <b>chặn</b> thông báo của trang này. Bấm biểu tượng ổ khoá cạnh địa chỉ trang → <b>Thông báo</b> → <b>Cho phép</b>, rồi tải lại trang.';
   }
   function updateSoundBtn(){ const b = $('#soundBtn'); b.setAttribute('aria-pressed', String(sound)); b.textContent = sound ? '🔔 Âm thanh: bật' : '🔕 Âm thanh: tắt'; }
+  function updateVoiceBtn(){ const b = $('#voiceBtn'); b.setAttribute('aria-pressed', String(voiceOn)); b.textContent = voiceOn ? '🗣 Giọng nói: bật' : '🗣 Giọng nói: tắt'; }
+  // Chỉ cảnh báo khi đang bật giọng nói, đã bật theo dõi, và máy không có giọng tiếng Việt
+  function showVoiceWarn(){ const w = $('#voiceWarn'); if (w) w.hidden = !(voiceOn && key && tts && tts.getVoices().length && !viVoice); }
 
   // ===== Hỏi Apps Script =====
   let busy = false;
@@ -289,19 +323,24 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
   });
   $('#permBtn').addEventListener('click', async () => { unlockAudio(); if ('Notification' in window) await Notification.requestPermission(); showPerm(); });
   $('#soundBtn').addEventListener('click', () => { sound = !sound; store.set('sound', sound ? '1' : '0'); unlockAudio(); updateSoundBtn(); if (sound) ting(); });
+  $('#voiceBtn').addEventListener('click', () => {
+    voiceOn = !voiceOn; store.set('voice', voiceOn ? '1' : '0'); updateVoiceBtn(); showVoiceWarn();
+    if (voiceOn) say('Đã bật giọng nói');
+  });
   $('#testBtn').addEventListener('click', () => {
     unlockAudio();
+    const r = { bienSo: '51D11932', nhaVanTai: 'Châu Hà', loaiDon: 'Trả vỏ - lấy hàng NPP' };
     notify('🚚 51D-119.32 · Châu Hà', 'Trả vỏ - lấy hàng NPP · RPM2 / X3\n14:35 · Nguyễn Văn An (thông báo thử)', 'thu');
-    ting(); showPerm();
+    ting(); setTimeout(() => say(speechOf(r)), 700); showPerm();
   });
   $('#resetBtn').addEventListener('click', () => { store.del('key'); key = ''; seen = null; $('#setup').hidden = false; $('#bar').hidden = true; $('#list').innerHTML = ''; setPill('', 'Chưa bật'); $('#keyInput').focus(); });
   // Trình duyệt chỉ cho phát tiếng sau khi người dùng bấm vào trang ít nhất một lần
   document.addEventListener('pointerdown', unlockAudio, { once: true });
 
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
-  updateSoundBtn();
+  updateSoundBtn(); updateVoiceBtn();
   if (!key){ $('#setup').hidden = false; } else { poll(); }
-  showPerm();
+  showPerm(); showVoiceWarn();
   startTimer();
 })();
 </script>
