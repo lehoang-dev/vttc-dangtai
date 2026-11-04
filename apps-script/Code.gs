@@ -184,8 +184,10 @@ function testShifts() {
     ['2000-01-07', '06:30', 'Ca 1', '2000-01-07', 1]  // cùng ca nhưng khác ngày
   ];
   let fail = 0;
+  // Tên tài xế kèm giờ chạy → mỗi lần chạy là "xe mới", trang theo dõi sẽ báo (dòng giống hệt lần trước thì không báo)
+  const lanChay = 'Test ' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'HH:mm:ss');
   cases.forEach((c, i) => {
-    const payload = { ngay: c[0], gioTruckIn: c[1], bienSo: 'TEST' + (i + 1), taiXe: 'Test', soDienThoai: '0912345678', maContainer: i % 2 ? '' : '0123456', nhaVanTai: 'ADV', loaiDon: 'Trả vỏ - lấy hàng NPP', phieu1: '12345678', phieu2: '87654321', soPallet: String(i * 3), tab: tab };
+    const payload = { ngay: c[0], gioTruckIn: c[1], bienSo: 'TEST' + (i + 1), taiXe: lanChay, soDienThoai: '0912345678', maContainer: i % 2 ? '' : '0123456', nhaVanTai: 'ADV', loaiDon: 'Trả vỏ - lấy hàng NPP', phieu1: '12345678', phieu2: '87654321', soPallet: String(i * 3), tab: tab };
     const res = doPost({ postData: { contents: JSON.stringify(payload) } }).getContent();
     const m = res.match(/^ok (.+) dòng (\d+) tab /);
     if (!m) { fail++; Logger.log('SAI   ' + c[0] + ' ' + c[1] + ' → ' + res); return; }
