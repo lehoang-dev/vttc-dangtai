@@ -150,7 +150,7 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
   // ===== Cấu hình =====
   // ENDPOINT: link Apps Script của file Sheet (cùng link với form). TAB: tab cần theo dõi ('' = DangTai).
   const CONFIG = { ENDPOINT: 'https://script.google.com/macros/s/AKfycbz16gNy0npNtsdOjg3RgLHMS-qpgM_HMV3k8ochx2LEYZReuOWK2grpu4b9gIucAXYf/exec', TAB: 'DangTai2' };
-  const POLL_MS = 15000;     // hỏi Apps Script mỗi 15 giây
+  const POLL_MS = 5000;      // hỏi Apps Script mỗi 5 giây (mỗi lượt ~1 giây; hỏi dày hơn không nhanh hơn mà dễ chạm giới hạn Apps Script)
   const SHOW = 30;           // số xe gần nhất hiển thị
   const MAX_SINGLE = 3;      // quá 3 xe mới cùng lúc → gộp 1 thông báo
 
