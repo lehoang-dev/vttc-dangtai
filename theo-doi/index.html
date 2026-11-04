@@ -199,7 +199,7 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
     tts.speak(u);
     return true;
   }
-  // Đọc chữ cái trên biển số theo cách gọi tiếng Việt: 50D12345 → "50 Đê 12345". Sửa cách đọc từng chữ ở đây.
+  // Đọc chữ cái trên biển số theo cách gọi tiếng Việt: 50D12345 → "50 Đê 1 2 3 4 5". Sửa cách đọc từng chữ ở đây.
   const LETTER = { A: 'A', B: 'Bê', C: 'Xê', D: 'Đê', E: 'E', F: 'Ép', G: 'Giê', H: 'Hát', K: 'Ca', L: 'Lờ', M: 'Mờ',
                    N: 'Nờ', P: 'Pê', R: 'Rờ', S: 'Ét', T: 'Tê', U: 'U', V: 'Vê', X: 'Ích', Y: 'I dài', Z: 'Dét' };
   // Chữ tắt trong loại đơn → đọc đầy đủ
@@ -207,10 +207,11 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
   function plateSpeech(p){
     p = String(p || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
     const m = p.match(/^(\d{2})([A-Z]{1,2})(\d+)$/);
-    return m ? m[1] + ' ' + m[2].split('').map(c => LETTER[c] || c).join(' ') + ' ' + m[3] : p;
+    // Phần số sau chữ đọc từng chữ số: 12345 → "1 2 3 4 5" (không đọc "mười hai nghìn...")
+    return m ? m[1] + ' ' + m[2].split('').map(c => LETTER[c] || c).join(' ') + ' ' + m[3].split('').join(' ') : p;
   }
   const words = s => String(s || '').replace(/\b[A-Z]{2,}\b/g, w => ABBR[w] || w);
-  // Câu đọc ngắn: "Xe 50 Đê 12345 vào Nhập hàng - lấy hàng nhà phân phối"
+  // Câu đọc ngắn: "Xe 50 Đê 1 2 3 4 5 vào Nhập hàng - lấy hàng nhà phân phối"
   const speechOf = r => 'Xe ' + plateSpeech(r.bienSo) + (r.loaiDon ? ' vào ' + words(r.loaiDon) : '');
 
   // ===== Thông báo Windows =====
