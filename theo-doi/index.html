@@ -11,7 +11,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
-/* Trang theo dõi: đọc các xe mới nhất từ Apps Script, báo bằng thông báo Windows + tiếng "ting".
+/* Trang theo dõi: đọc các xe mới nhất từ Apps Script, báo bằng thông báo Windows (không tiếng) + giọng đọc tiếng Việt.
    Cùng bảng màu với form đăng tài (đỏ Viettel, xanh TTC). */
 :root{
   --bg:#f3f4f6; --surface:#fff; --surface-2:#f5f6f8; --fg:#1a1d24; --muted:#5d6472; --line:#dcdfe5;
@@ -121,15 +121,19 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
     <button class="btn primary" id="permBtn" type="button">Cho phép thông báo</button>
   </section>
 
+  <section class="card warn" id="clickHint" hidden>
+    <h2>Bấm vào trang một lần để bật giọng đọc</h2>
+    <p>Trình duyệt chỉ cho đọc thành tiếng sau khi bạn bấm vào trang. Mỗi lần mở lại trang, bấm vào chỗ bất kỳ (ví dụ khung này) một lần là được.</p>
+  </section>
+
   <section class="card warn" id="voiceWarn" hidden>
     <h2>Máy chưa có giọng đọc tiếng Việt</h2>
-    <p>Trang vẫn báo bằng popup và tiếng "ting", nhưng chưa đọc được thành tiếng. Cách nhanh nhất: mở trang này bằng <b>Microsoft Edge</b> (có sẵn giọng HoàiMy, NamMinh). Hoặc trên Windows: <b>Cài đặt → Thời gian &amp; ngôn ngữ → Giọng nói → Thêm giọng nói → Tiếng Việt</b>, rồi khởi động lại trình duyệt.</p>
+    <p>Trang vẫn báo bằng popup, nhưng chưa đọc được thành tiếng. Cách nhanh nhất: mở trang này bằng <b>Microsoft Edge</b> (có sẵn giọng HoàiMy, NamMinh). Hoặc trên Windows: <b>Cài đặt → Thời gian &amp; ngôn ngữ → Giọng nói → Thêm giọng nói → Tiếng Việt</b>, rồi khởi động lại trình duyệt.</p>
   </section>
 
   <section class="bar" id="bar" hidden>
     <div class="meta" id="meta">—</div>
     <div class="row">
-      <button class="btn small" id="soundBtn" type="button" aria-pressed="true">🔔 Âm thanh: bật</button>
       <button class="btn small" id="voiceBtn" type="button" aria-pressed="true">🗣 Giọng nói: bật</button>
       <button class="btn small" id="testBtn" type="button">Thử thông báo</button>
       <a class="btn small" id="sheetLink" href="#" target="_blank" rel="noopener">Mở Google Sheet</a>
@@ -169,32 +173,11 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
   const tagsOf = r => [r.nhap, r.xuat].filter(Boolean);
 
   let key = store.get('key', '');
-  let sound = store.get('sound', '1') === '1';
   let voiceOn = store.get('voice', '1') === '1';
   let viVoice = null;          // giọng tiếng Việt tốt nhất trên máy; null = không có
   let seen = null;             // Set id các xe đã thấy; null = chưa tải lần đầu (lần đầu không báo)
   let sheetUrl = '';
   let unread = 0;
-  let audio = null;
-
-  // ===== Âm thanh "ting" (tự tạo, không cần file) =====
-  function unlockAudio(){ try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') audio.resume(); } catch (_) {} }
-  // To: mỗi nốt gần mức tối đa, qua bộ nén để các nốt chồng nhau không bị rè; "ting-ting" lặp 2 lần cho dễ nghe.
-  function ting(){
-    if (!sound || !audio) return;
-    try {
-      const t = audio.currentTime;
-      const comp = audio.createDynamicsCompressor();
-      comp.threshold.value = -6; comp.ratio.value = 12;
-      comp.connect(audio.destination);
-      [[880, 0], [1320, 0.14], [880, 0.6], [1320, 0.74]].forEach(([f, d]) => {
-        const o = audio.createOscillator(), g = audio.createGain();
-        o.type = 'triangle'; o.frequency.value = f;
-        g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.9, t + d + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.5);
-        o.connect(g).connect(comp); o.start(t + d); o.stop(t + d + 0.55);
-      });
-    } catch (_) {}
-  }
 
   // ===== Giọng nói (đọc thành tiếng bằng giọng tiếng Việt có trên máy) =====
   const tts = window.speechSynthesis;
@@ -214,17 +197,29 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
     tts.speak(u);
     return true;
   }
-  // Câu đọc ngắn: "Xe 50H12345 vào Nhập hàng - lấy hàng NPP"
-  const speechOf = r => 'Xe ' + String(r.bienSo || '').toUpperCase().replace(/[^A-Z0-9]/g, '') + (r.loaiDon ? ' vào ' + r.loaiDon : '');
+  // Đọc chữ cái trên biển số theo cách gọi tiếng Việt: 50D12345 → "50 Đê 12345". Sửa cách đọc từng chữ ở đây.
+  const LETTER = { A: 'A', B: 'Bê', C: 'Xê', D: 'Đê', E: 'E', F: 'Ép', G: 'Giê', H: 'Hát', K: 'Ca', L: 'Lờ', M: 'Mờ',
+                   N: 'Nờ', P: 'Pê', R: 'Rờ', S: 'Ét', T: 'Tê', U: 'U', V: 'Vê', X: 'Ích', Y: 'I dài', Z: 'Dét' };
+  // Chữ tắt trong loại đơn → đọc đầy đủ
+  const ABBR = { NPP: 'nhà phân phối' };
+  function plateSpeech(p){
+    p = String(p || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const m = p.match(/^(\d{2})([A-Z]{1,2})(\d+)$/);
+    return m ? m[1] + ' ' + m[2].split('').map(c => LETTER[c] || c).join(' ') + ' ' + m[3] : p;
+  }
+  const words = s => String(s || '').replace(/\b[A-Z]{2,}\b/g, w => ABBR[w] || w);
+  // Câu đọc ngắn: "Xe 50 Đê 12345 vào Nhập hàng - lấy hàng nhà phân phối"
+  const speechOf = r => 'Xe ' + plateSpeech(r.bienSo) + (r.loaiDon ? ' vào ' + words(r.loaiDon) : '');
 
   // ===== Thông báo Windows =====
   function notify(title, body, tag){
     if (!('Notification' in window) || Notification.permission !== 'granted') return;
     try {
-      const n = new Notification(title, { body, tag, icon: 'icon-192.png', badge: 'icon-192.png' });
+      // silent: không phát tiếng "ding" của Windows, để chỉ nghe giọng đọc
+      const n = new Notification(title, { body, tag, icon: 'icon-192.png', badge: 'icon-192.png', silent: true });
       n.onclick = () => { window.focus(); if (sheetUrl) window.open(sheetUrl, '_blank', 'noopener'); n.close(); };
     } catch (_) {
-      if (navigator.serviceWorker) navigator.serviceWorker.ready.then(reg => reg.showNotification(title, { body, tag, icon: 'icon-192.png', data: { url: sheetUrl } })).catch(() => {});
+      if (navigator.serviceWorker) navigator.serviceWorker.ready.then(reg => reg.showNotification(title, { body, tag, icon: 'icon-192.png', silent: true, data: { url: sheetUrl } })).catch(() => {});
     }
   }
   function notifyRows(rows){
@@ -235,9 +230,8 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
       rows.forEach(r => notify('🚚 ' + fmtPlate(r.bienSo) + ' · ' + r.nhaVanTai,
         r.loaiDon + (tagsOf(r).length ? ' · ' + tagsOf(r).join(' / ') : '') + '\n' + r.gio + ' · ' + r.taiXe, idOf(r)));
     }
-    ting();
-    // Đọc sau tiếng "ting" một chút; nhiều xe cùng lúc thì chỉ đọc số lượng
-    setTimeout(() => say(rows.length > MAX_SINGLE ? 'Có ' + rows.length + ' xe mới đăng tài' : rows.map(speechOf).join('. ')), 1300);
+    // Nhiều xe cùng lúc thì chỉ đọc số lượng
+    say(rows.length > MAX_SINGLE ? 'Có ' + rows.length + ' xe mới đăng tài' : rows.map(speechOf).join('. '));
     if (document.hidden){ unread += rows.length; document.title = '(' + unread + ') Theo dõi đăng tài – VTTC'; }
   }
   document.addEventListener('visibilitychange', () => { if (!document.hidden){ unread = 0; document.title = 'Theo dõi đăng tài – VTTC'; } });
@@ -270,7 +264,6 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
     if ('Notification' in window && Notification.permission === 'denied')
       $('#permText').innerHTML = 'Chrome đang <b>chặn</b> thông báo của trang này. Bấm biểu tượng ổ khoá cạnh địa chỉ trang → <b>Thông báo</b> → <b>Cho phép</b>, rồi tải lại trang.';
   }
-  function updateSoundBtn(){ const b = $('#soundBtn'); b.setAttribute('aria-pressed', String(sound)); b.textContent = sound ? '🔔 Âm thanh: bật' : '🔕 Âm thanh: tắt'; }
   function updateVoiceBtn(){ const b = $('#voiceBtn'); b.setAttribute('aria-pressed', String(voiceOn)); b.textContent = voiceOn ? '🗣 Giọng nói: bật' : '🗣 Giọng nói: tắt'; }
   // Chỉ cảnh báo khi đang bật giọng nói, đã bật theo dõi, và máy không có giọng tiếng Việt
   function showVoiceWarn(){ const w = $('#voiceWarn'); if (w) w.hidden = !(voiceOn && key && tts && tts.getVoices().length && !viVoice); }
@@ -330,30 +323,33 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
   $('#setupForm').addEventListener('submit', async e => {
     e.preventDefault();
     key = $('#keyInput').value.trim(); if (!key) return;
-    store.set('key', key); seen = null; gen++; unlockAudio();
+    store.set('key', key); seen = null; gen++;
     if ('Notification' in window && Notification.permission === 'default') await Notification.requestPermission();
-    showPerm(); $('#setupMsg').textContent = ''; poll();
+    showPerm(); showClickHint(); $('#setupMsg').textContent = ''; poll();
   });
-  $('#permBtn').addEventListener('click', async () => { unlockAudio(); if ('Notification' in window) await Notification.requestPermission(); showPerm(); });
-  $('#soundBtn').addEventListener('click', () => { sound = !sound; store.set('sound', sound ? '1' : '0'); unlockAudio(); updateSoundBtn(); if (sound) ting(); });
+  $('#permBtn').addEventListener('click', async () => { if ('Notification' in window) await Notification.requestPermission(); showPerm(); });
   $('#voiceBtn').addEventListener('click', () => {
-    voiceOn = !voiceOn; store.set('voice', voiceOn ? '1' : '0'); updateVoiceBtn(); showVoiceWarn();
+    voiceOn = !voiceOn; store.set('voice', voiceOn ? '1' : '0'); updateVoiceBtn(); showVoiceWarn(); showClickHint();
     if (voiceOn) say('Đã bật giọng nói');
   });
   $('#testBtn').addEventListener('click', () => {
-    unlockAudio();
     const r = { bienSo: '51D11932', nhaVanTai: 'Châu Hà', loaiDon: 'Trả vỏ - lấy hàng NPP' };
     notify('🚚 51D-119.32 · Châu Hà', 'Trả vỏ - lấy hàng NPP · RPM2 / X3\n14:35 · Nguyễn Văn An (thông báo thử)', 'thu');
-    ting(); setTimeout(() => say(speechOf(r)), 1300); showPerm();
+    say(speechOf(r)); showPerm();
   });
   $('#resetBtn').addEventListener('click', () => { store.del('key'); key = ''; seen = null; gen++; $('#setup').hidden = false; $('#bar').hidden = true; $('#list').innerHTML = ''; setPill('', 'Chưa bật'); $('#keyInput').focus(); });
-  // Trình duyệt chỉ cho phát tiếng sau khi người dùng bấm vào trang ít nhất một lần
-  document.addEventListener('pointerdown', unlockAudio, { once: true });
+  // Trình duyệt chỉ cho đọc thành tiếng sau khi người dùng bấm vào trang ít nhất một lần (kể cả khi mở lại trang)
+  function showClickHint(){
+    const active = navigator.userActivation ? navigator.userActivation.hasBeenActive : true;
+    $('#clickHint').hidden = active || !voiceOn || !key;
+  }
+  document.addEventListener('pointerdown', () => setTimeout(showClickHint, 0));
+  document.addEventListener('keydown', () => setTimeout(showClickHint, 0));
 
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
-  updateSoundBtn(); updateVoiceBtn();
+  updateVoiceBtn();
   if (!key){ $('#setup').hidden = false; } else { poll(); }
-  showPerm(); showVoiceWarn();
+  showPerm(); showVoiceWarn(); showClickHint();
   startTimer();
 })();
 </script>
