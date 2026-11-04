@@ -179,15 +179,19 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
 
   // ===== Âm thanh "ting" (tự tạo, không cần file) =====
   function unlockAudio(){ try { audio = audio || new (window.AudioContext || window.webkitAudioContext)(); if (audio.state === 'suspended') audio.resume(); } catch (_) {} }
+  // To: mỗi nốt gần mức tối đa, qua bộ nén để các nốt chồng nhau không bị rè; "ting-ting" lặp 2 lần cho dễ nghe.
   function ting(){
     if (!sound || !audio) return;
     try {
       const t = audio.currentTime;
-      [[880, 0], [1320, 0.14]].forEach(([f, d]) => {
+      const comp = audio.createDynamicsCompressor();
+      comp.threshold.value = -6; comp.ratio.value = 12;
+      comp.connect(audio.destination);
+      [[880, 0], [1320, 0.14], [880, 0.6], [1320, 0.74]].forEach(([f, d]) => {
         const o = audio.createOscillator(), g = audio.createGain();
-        o.type = 'sine'; o.frequency.value = f;
-        g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.35, t + d + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.5);
-        o.connect(g).connect(audio.destination); o.start(t + d); o.stop(t + d + 0.55);
+        o.type = 'triangle'; o.frequency.value = f;
+        g.gain.setValueAtTime(0.0001, t + d); g.gain.exponentialRampToValueAtTime(0.9, t + d + 0.02); g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.5);
+        o.connect(g).connect(comp); o.start(t + d); o.stop(t + d + 0.55);
       });
     } catch (_) {}
   }
@@ -206,7 +210,7 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
   function say(text){
     if (!voiceOn || !tts || !viVoice) return false;
     const u = new SpeechSynthesisUtterance(text);
-    u.voice = viVoice; u.lang = viVoice.lang; u.rate = 0.95;
+    u.voice = viVoice; u.lang = viVoice.lang; u.rate = 0.95; u.volume = 1; // 1 = to nhất trình duyệt cho phép
     tts.speak(u);
     return true;
   }
@@ -233,7 +237,7 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
     }
     ting();
     // Đọc sau tiếng "ting" một chút; nhiều xe cùng lúc thì chỉ đọc số lượng
-    setTimeout(() => say(rows.length > MAX_SINGLE ? 'Có ' + rows.length + ' xe mới đăng tài' : rows.map(speechOf).join('. ')), 700);
+    setTimeout(() => say(rows.length > MAX_SINGLE ? 'Có ' + rows.length + ' xe mới đăng tài' : rows.map(speechOf).join('. ')), 1300);
     if (document.hidden){ unread += rows.length; document.title = '(' + unread + ') Theo dõi đăng tài – VTTC'; }
   }
   document.addEventListener('visibilitychange', () => { if (!document.hidden){ unread = 0; document.title = 'Theo dõi đăng tài – VTTC'; } });
@@ -340,7 +344,7 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
     unlockAudio();
     const r = { bienSo: '51D11932', nhaVanTai: 'Châu Hà', loaiDon: 'Trả vỏ - lấy hàng NPP' };
     notify('🚚 51D-119.32 · Châu Hà', 'Trả vỏ - lấy hàng NPP · RPM2 / X3\n14:35 · Nguyễn Văn An (thông báo thử)', 'thu');
-    ting(); setTimeout(() => say(speechOf(r)), 700); showPerm();
+    ting(); setTimeout(() => say(speechOf(r)), 1300); showPerm();
   });
   $('#resetBtn').addEventListener('click', () => { store.del('key'); key = ''; seen = null; gen++; $('#setup').hidden = false; $('#bar').hidden = true; $('#list').innerHTML = ''; setPill('', 'Chưa bật'); $('#keyInput').focus(); });
   // Trình duyệt chỉ cho phát tiếng sau khi người dùng bấm vào trang ít nhất một lần
