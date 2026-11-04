@@ -104,8 +104,16 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);-webkit-font
 .carrier-field{container-type:inline-size}
 .choice-carriers{grid-template-columns:repeat(3,minmax(0,1fr))}
 @container (min-width:36rem){.choice-carriers{grid-template-columns:repeat(6,minmax(0,1fr))}}
+/* Loại đơn: 5 việc đơn + 5 việc kết hợp. Lưới 2 cột, nút lẻ cuối trải hết hàng;
+   ô đủ rộng thì 5 việc đơn nằm một hàng (đo theo bề rộng ô, như .carrier-field). */
+.order-field{container-type:inline-size}
 .choice-orders{grid-template-columns:repeat(2,minmax(0,1fr))}
-@media (min-width:768px){.choice-orders{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.choice-orders .choice:last-of-type:nth-of-type(odd),
+.choice-combos .choice:last-of-type:nth-of-type(odd){grid-column:1/-1}
+@container (min-width:36rem){
+  .choice-orders{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .choice-orders .choice:last-of-type:nth-of-type(odd){grid-column:auto}
+}
 .choice{display:flex;align-items:center;justify-content:center;gap:.4rem;min-height:52px;padding:.5rem .6rem;border:1.5px solid var(--line);border-radius:.75rem;
   background:var(--field);color:var(--fg);font-weight:600;font-size:.95rem;text-align:center;cursor:pointer;user-select:none;line-height:1.25;position:relative;
   transition:border-color .15s,background-color .15s,box-shadow .15s}
