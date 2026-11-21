@@ -1,3 +1,14 @@
+// Dùng CHUNG một code này cho cả 2 Sheet (kho Sóng Thần và kho Cái Bè). Không cần sửa code theo từng kho:
+// mỗi Sheet chạy MỘT LẦN hàm datKhoSongThan hoặc datKhoCaiBe → tên kho lưu trong Thuộc tính tập lệnh của Sheet đó.
+// Form gửi kèm kho tài xế đã chọn; kho không khớp với Sheet này thì từ chối, không ghi nhầm sang kho kia.
+function datKhoSongThan() { datKho_('Sóng Thần'); }
+function datKhoCaiBe() { datKho_('Cái Bè'); }
+function datKho_(kho) {
+  PropertiesService.getScriptProperties().setProperty('KHO', kho);
+  Logger.log('Sheet "' + SpreadsheetApp.getActiveSpreadsheet().getName() + '" nhận đăng tài của kho: ' + kho);
+}
+const khoCuaSheet_ = () => PropertiesService.getScriptProperties().getProperty('KHO') || '';
+
 const SHEET_NAME = 'DangTai';
 // Tab thử nghiệm: form mở bằng link ?thu=1 gửi kèm tab: 'DangTai2' → ghi vào đây, không đụng dữ liệu thật.
 // Chỉ nhận đúng 2 tên này; tên khác hoặc không gửi → ghi vào SHEET_NAME.
@@ -21,16 +32,23 @@ const COL = {
   loaiDon: ['Loại đơn hàng', 'Loại đơn hàng RPM & FG'],
   // Số phiếu 1 luôn có; Số phiếu 2 có khi loại đơn 2 việc (nhập/trả vỏ + lấy hàng). Phiếu nào là gì: xem cột Loại đơn hàng.
   phieu1: ['Số phiếu 1', 'Số SO-ST'],
-  phieu2: 'Số phiếu 2'
+  phieu2: 'Số phiếu 2',
+  kho: 'Kho' // không bắt buộc: Sheet có cột "Kho" thì ghi tên kho vào, không có thì bỏ qua
 };
-// Cột được phép chưa có trong Sheet (thiếu thì bỏ qua, không chặn đăng tài). Chỉ dùng trong lúc chuyển đổi.
-const OPTIONAL = ['phieu2'];
+// Cột được phép chưa có trong Sheet (thiếu thì bỏ qua, không chặn đăng tài).
+const OPTIONAL = ['phieu2', 'kho'];
 
 function doPost(e) {
   const lock = LockService.getScriptLock();
   lock.waitLock(10000); // tránh 2 tài xế gửi cùng lúc bị ghi chồng dòng
   try {
     const d = JSON.parse(e.postData.contents);
+    // Kiểm tra kho TRƯỚC khi ghi. Form cũ (chưa có ô kho) không gửi kho → vẫn nhận như trước.
+    const kho = khoCuaSheet_();
+    if (d.kho) {
+      if (!kho) throw new Error('Sheet "' + SpreadsheetApp.getActiveSpreadsheet().getName() + '" chưa đặt kho. Trong Apps Script, chạy hàm datKhoSongThan hoặc datKhoCaiBe.');
+      if (d.kho !== kho) throw new Error('Xe đăng tài kho "' + d.kho + '" nhưng Sheet này là kho "' + kho + '". Kiểm tra Deployment ID trong truckin.js.');
+    }
     const sh = getSheet_(d.tab === TEST_SHEET ? TEST_SHEET : SHEET_NAME);
     const head = headers_(sh);
     // Vị trí cột (1, 2, ...) của từng khoá trong COL; 0 = chưa có trong Sheet
@@ -68,6 +86,7 @@ function doPost(e) {
     // định dạng chữ, giữ nguyên số 0 ở đầu. Form cũ gửi soSO → ghi vào ô số phiếu 1.
     put('phieu1', String(d.phieu1 || d.soSO || ''), '@');
     put('phieu2', String(d.phieu2 || ''), '@');
+    put('kho', d.kho || kho);
 
     return ContentService.createTextOutput('ok ' + shift.ca + ' ' + shift.ngay + ' dòng ' + r + ' tab ' + sh.getName());
   } catch (err) {
@@ -82,7 +101,7 @@ function doPost(e) {
 // Có ?key=... → trả các xe mới nhất cho trang theo dõi (theo-doi/), chỉ khi đúng mã theo dõi.
 function doGet(e) {
   const p = (e && e.parameter) || {};
-  if (!p.key) return ContentService.createTextOutput('OK - DangTai endpoint đang chạy');
+  if (!p.key) return ContentService.createTextOutput('OK - DangTai endpoint đang chạy · kho: ' + (khoCuaSheet_() || 'CHƯA ĐẶT (chạy datKhoSongThan hoặc datKhoCaiBe)'));
   let out;
   try { out = theoDoi_(p); } catch (err) { console.error(err); out = { ok: false, error: String(err) }; }
   return ContentService.createTextOutput(JSON.stringify(out)).setMimeType(ContentService.MimeType.JSON);
@@ -105,7 +124,7 @@ function theoDoi_(p) {
   const ss = sh.getParent();
   const head = headers_(sh);
   const at = names => { for (const n of [].concat(names)) { const i = head.indexOf(n); if (i >= 0) return i; } return -1; };
-  const info = { ok: true, file: ss.getName(), tab: sh.getName(), url: ss.getUrl() + '#gid=' + sh.getSheetId(), rows: [] };
+  const info = { ok: true, kho: khoCuaSheet_(), file: ss.getName(), tab: sh.getName(), url: ss.getUrl() + '#gid=' + sh.getSheetId(), rows: [] };
   const keyIdx = at(KEY_COL);
   if (keyIdx < 0) return Object.assign(info, { ok: false, error: 'Không tìm thấy cột "' + KEY_COL + '"' });
   const last = nextRow_(sh, keyIdx + 1) - 1;
@@ -187,7 +206,7 @@ function testShifts() {
   // Tên tài xế kèm giờ chạy → mỗi lần chạy là "xe mới", trang theo dõi sẽ báo (dòng giống hệt lần trước thì không báo)
   const lanChay = 'Test ' + Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'HH:mm:ss');
   cases.forEach((c, i) => {
-    const payload = { ngay: c[0], gioTruckIn: c[1], bienSo: 'TEST' + (i + 1), taiXe: lanChay, soDienThoai: '0912345678', maContainer: i % 2 ? '' : '0123456', nhaVanTai: 'ADV', loaiDon: 'Trả vỏ - lấy hàng NPP', phieu1: '12345678', phieu2: '87654321', soPallet: String(i * 3), tab: tab };
+    const payload = { ngay: c[0], gioTruckIn: c[1], bienSo: 'TEST' + (i + 1), taiXe: lanChay, soDienThoai: '0912345678', maContainer: i % 2 ? '' : '0123456', nhaVanTai: 'ADV', loaiDon: 'Trả vỏ - lấy hàng NPP', phieu1: '12345678', phieu2: '87654321', soPallet: String(i * 3), kho: khoCuaSheet_(), tab: tab };
     const res = doPost({ postData: { contents: JSON.stringify(payload) } }).getContent();
     const m = res.match(/^ok (.+) dòng (\d+) tab /);
     if (!m) { fail++; Logger.log('SAI   ' + c[0] + ' ' + c[1] + ' → ' + res); return; }
