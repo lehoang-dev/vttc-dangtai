@@ -54,7 +54,8 @@
     nhap:   { label: 'nhập hàng' },
     layCK:  { label: 'lấy hàng chuyển kho' },
     layNPP: { label: 'lấy hàng NPP' },
-    traVo:  { label: 'trả vỏ' }
+    traVo:  { label: 'trả vỏ' },
+    layVo:  { label: 'lấy vỏ' }
   };
   const ORDER = {
     'Nhập hàng': ['nhap'],
@@ -63,6 +64,7 @@
     'Trả vỏ': ['traVo'],
     'Nhập hàng - lấy hàng chuyển kho': ['nhap', 'layCK'],
     'Nhập hàng - lấy hàng NPP': ['nhap', 'layNPP'],
+    'Nhập hàng - lấy vỏ': ['nhap', 'layVo'], // lấy vỏ chỉ đi kèm nhập hàng, không có loại "Lấy vỏ" riêng
     'Trả vỏ - lấy hàng chuyển kho': ['traVo', 'layCK'],
     'Trả vỏ - lấy hàng NPP': ['traVo', 'layNPP']
   };
