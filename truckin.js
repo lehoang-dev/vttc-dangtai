@@ -1,12 +1,15 @@
 (function(){
   'use strict';
   // ===== Cấu hình =====
-  // ENDPOINT: URL Web App (Google Apps Script) nhận dữ liệu vào Google Sheet. Để trống = xem thử, không gửi đi đâu.
+  // KHO: Deployment ID của Web App (Google Apps Script) gắn với Google Sheet của từng kho.
+  //   Tài xế chọn kho nào thì dữ liệu gửi vào Sheet của kho đó. ID để trống = kho đó chạy chế độ xem thử, không gửi đi đâu.
+  //   Tên kho ở đây phải trùng đúng value của ô chọn kho trong index.html và tên kho đặt cho Sheet đó (hàm datKhoSongThan / datKhoCaiBe trong Code.gs).
   // TAB: tên tab gửi kèm cho Apps Script ('' = tab mặc định DangTai). BANNER: dải cảnh báo ở đầu trang ('' = không hiện).
   // ĐÂY LÀ DÒNG DUY NHẤT KHÁC NHAU GIỮA 2 NHÁNH. Gộp test → main thì giữ nguyên dòng này của main:
-  //   main: link Apps Script file thật, TAB '', BANNER ''
-  //   test: link Apps Script file thử, TAB 'DangTai2', BANNER 'BẢN THỬ NGHIỆM…'
-  const CONFIG = { ENDPOINT: 'https://script.google.com/macros/s/AKfycbz16gNy0npNtsdOjg3RgLHMS-qpgM_HMV3k8ochx2LEYZReuOWK2grpu4b9gIucAXYf/exec', TAB: '', BANNER: '' };
+  //   main: ID Apps Script file thật, TAB '', BANNER ''
+  //   test: ID Apps Script file thử, TAB 'DangTai2', BANNER 'BẢN THỬ NGHIỆM…'
+  const CONFIG = { KHO: { 'Sóng Thần': 'AKfycbz16gNy0npNtsdOjg3RgLHMS-qpgM_HMV3k8ochx2LEYZReuOWK2grpu4b9gIucAXYf', 'Cái Bè': 'AKfycbyDoGM3CVXFy_RPcDzcQpXpmQw-IDf-qh7PvLbV63lCrLvPxR-j1y9MXv--twIZ-nFlNA' }, TAB: '', BANNER: '' };
+  const endpointOf = kho => CONFIG.KHO[kho] ? 'https://script.google.com/macros/s/' + CONFIG.KHO[kho] + '/exec' : '';
 
   const $ = (s, r) => (r || document).querySelector(s);
   const $$ = (s, r) => Array.from((r || document).querySelectorAll(s));
@@ -51,7 +54,8 @@
     nhap:   { label: 'nhập hàng' },
     layCK:  { label: 'lấy hàng chuyển kho' },
     layNPP: { label: 'lấy hàng NPP' },
-    traVo:  { label: 'trả vỏ' }
+    traVo:  { label: 'trả vỏ' },
+    layVo:  { label: 'lấy vỏ' }
   };
   const ORDER = {
     'Nhập hàng': ['nhap'],
@@ -60,6 +64,7 @@
     'Trả vỏ': ['traVo'],
     'Nhập hàng - lấy hàng chuyển kho': ['nhap', 'layCK'],
     'Nhập hàng - lấy hàng NPP': ['nhap', 'layNPP'],
+    'Nhập hàng - lấy vỏ': ['nhap', 'layVo'], // lấy vỏ chỉ đi kèm nhập hàng, không có loại "Lấy vỏ" riêng
     'Trả vỏ - lấy hàng chuyển kho': ['traVo', 'layCK'],
     'Trả vỏ - lấy hàng NPP': ['traVo', 'layNPP']
   };
@@ -70,6 +75,7 @@
   // opt: không bắt buộc, để trống vẫn gửi được và không tính vào tiến độ
   // slot: ô số phiếu thứ mấy; ô 1 luôn bắt buộc, ô 2 chỉ bắt buộc khi loại đơn có 2 việc
   const FIELDS = [
+    { k: 'kho', label: 'Kho', radio: true, empty: 'Vui lòng chọn kho Sóng Thần hoặc Cái Bè.' },
     { k: 'ngay', label: 'Ngày', auto: true },
     { k: 'bienSo', label: 'Biển số xe', empty: 'Vui lòng nhập biển số xe.' },
     { k: 'maContainer', label: 'Biển số container', opt: true },
@@ -175,6 +181,7 @@
     if (tried && bad) setHint('Còn ' + bad + ' thông tin cần bổ sung hoặc sửa', true);
     else setHint(ok === TOTAL ? 'Đã đủ thông tin, bấm gửi' : 'Điền đủ ' + TOTAL + ' thông tin để gửi', false);
     $$('[data-prog-text]').forEach(t => t.textContent = ok + '/' + TOTAL);
+    $('#headKho').textContent = all.kho ? ' · ' + all.kho : '';
     $('#sumPlate').textContent = all.bienSo ? fmtPlate(all.bienSo) : '— — —';
     buildRows($('#sumRows'), all, true);
     return { all, ok, okMap };
@@ -230,8 +237,9 @@
   }
 
   async function send(payload){
-    if (!CONFIG.ENDPOINT){ await new Promise(r => setTimeout(r, 700)); return { demo: true }; }
-    await fetch(CONFIG.ENDPOINT, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
+    const url = endpointOf(payload.kho);
+    if (!url){ await new Promise(r => setTimeout(r, 700)); return { demo: true }; }
+    await fetch(url, { method: 'POST', mode: 'no-cors', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(payload) });
     return { demo: false };
   }
 

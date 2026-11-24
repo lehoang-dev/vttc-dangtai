@@ -104,6 +104,8 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);-webkit-font
 .carrier-field{container-type:inline-size}
 .choice-carriers{grid-template-columns:repeat(3,minmax(0,1fr))}
 @container (min-width:36rem){.choice-carriers{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.choice-kho{grid-template-columns:repeat(2,minmax(0,1fr))}
+.choice-kho .choice{min-height:64px;font-size:1.05rem;font-weight:700}
 .choice-orders{grid-template-columns:repeat(2,minmax(0,1fr))}
 @media (min-width:768px){.choice-orders{grid-template-columns:repeat(4,minmax(0,1fr))}}
 .choice{display:flex;align-items:center;justify-content:center;gap:.4rem;min-height:52px;padding:.5rem .6rem;border:1.5px solid var(--line);border-radius:.75rem;
@@ -118,6 +120,9 @@ body{background:var(--bg);color:var(--fg);font-family:var(--f-body);-webkit-font
 .btn-check:focus-visible + .choice{outline:2px solid var(--brand);outline-offset:2px}
 .choice-orders .choice{min-height:60px;font-size:.9rem;padding-inline:.75rem}
 .choice-combos{grid-template-columns:repeat(2,minmax(0,1fr))}
+/* 5 ô kết hợp: điện thoại 2 cột, ô cuối chiếm cả hàng; màn rộng 3 cột = hàng Nhập hàng (3) + hàng Trả vỏ (2) */
+.choice-combos > .choice:last-child{grid-column:1/-1}
+@media (min-width:768px){.choice-combos{grid-template-columns:repeat(3,minmax(0,1fr))}.choice-combos > .choice:last-child{grid-column:auto}}
 .choice-combos .choice{min-height:60px;font-size:.9rem;padding-inline:.75rem}
 .choice-caption{color:var(--muted);font-size:.78rem;font-weight:600;margin:.75rem 0 .4rem}
 .is-invalid-group .choice{border-color:var(--danger)}

@@ -27,6 +27,7 @@
   --ok:#5fd29a; --ok-soft:#143327; --danger:#ff8a7f; --danger-soft:#3a1a18;
   --n:#8eaaf0; --n-soft:#1c2740; --rpm:#f5b35a; --rpm-soft:#3a2a12; --x:#5fd29a; --x-soft:#143327; } }
 *{box-sizing:border-box}
+[hidden]{display:none!important}
 body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--f-body);-webkit-font-smoothing:antialiased}
 .mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
 button,input{font:inherit}
@@ -84,6 +85,13 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
 .tag{font-family:var(--f-mono);font-weight:700;font-size:.95rem;border-radius:8px;padding:4px 10px}
 .tag.n{background:var(--n-soft);color:var(--n)} .tag.rpm{background:var(--rpm-soft);color:var(--rpm)} .tag.x{background:var(--x-soft);color:var(--x)}
 .empty{text-align:center;color:var(--muted);padding:30px 0}
+.kho-row{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px}
+.kho-row .lbl{font-weight:700}
+.seg{display:inline-flex;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:4px;gap:4px}
+.seg button{height:40px;border:0;border-radius:8px;background:transparent;color:var(--muted);font-weight:700;padding:0 18px;cursor:pointer}
+.seg button:hover{color:var(--brand)}
+.seg button[aria-pressed=true]{background:var(--brand);color:#fff}
+.seg button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 @media (max-width:600px){
   .item{grid-template-columns:60px minmax(0,1fr)}
   .tags{grid-row:auto;grid-column:2;justify-content:flex-start}
@@ -105,9 +113,14 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
 </header>
 
 <main class="wrap">
+  <section class="kho-row" aria-label="Chọn kho theo dõi">
+    <span class="lbl">Kho theo dõi</span>
+    <div class="seg" id="khoSeg"></div>
+  </section>
+
   <section class="card" id="setup" hidden>
-    <h2>Bật theo dõi</h2>
-    <p>Nhập mã theo dõi (lấy trong Apps Script, hàm <b>datMaTheoDoi</b>). Mã chỉ lưu trên máy này.</p>
+    <h2>Bật theo dõi kho <span id="setupKho"></span></h2>
+    <p>Nhập mã theo dõi của kho này (lấy trong Apps Script của Sheet kho đó, hàm <b>datMaTheoDoi</b>). Mỗi kho một mã, chỉ lưu trên máy này.</p>
     <form class="row" id="setupForm">
       <input type="password" id="keyInput" placeholder="Mã theo dõi" autocomplete="off" required>
       <button class="btn primary" type="submit">Bật theo dõi</button>
@@ -148,10 +161,18 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
 (function(){
   'use strict';
   // ===== Cấu hình =====
-  // ENDPOINT: link Apps Script của file Sheet (cùng link với form). TAB: tab cần theo dõi ('' = DangTai chính).
-  // Thử trên tab phụ: mở link kèm ?tab=DangTai2 (chỉ nhận đúng tên này).
-  const CONFIG = { ENDPOINT: 'https://script.google.com/macros/s/AKfycbz16gNy0npNtsdOjg3RgLHMS-qpgM_HMV3k8ochx2LEYZReuOWK2grpu4b9gIucAXYf/exec', TAB: '' };
+  // KHO: Deployment ID Apps Script của Sheet từng kho (giống CONFIG.KHO trong truckin.js). TAB: tab cần theo dõi ('' = DangTai chính).
+  // Mở thẳng một kho: thêm ?kho=songthan hoặc ?kho=caibe vào link. Thử trên tab phụ: thêm ?tab=DangTai2 (chỉ nhận đúng tên này).
+  const CONFIG = {
+    KHO: { 'Sóng Thần': 'AKfycbz16gNy0npNtsdOjg3RgLHMS-qpgM_HMV3k8ochx2LEYZReuOWK2grpu4b9gIucAXYf',
+           'Cái Bè': 'AKfycbyDoGM3CVXFy_RPcDzcQpXpmQw-IDf-qh7PvLbV63lCrLvPxR-j1y9MXv--twIZ-nFlNA' },
+    TAB: ''
+  };
   if (/[?&]tab=DangTai2\b/.test(location.search)) CONFIG.TAB = 'DangTai2';
+  const KHOS = Object.keys(CONFIG.KHO);
+  // "Sóng Thần" → "songthan": tách dấu (NFD) rồi bỏ mọi ký tự ngoài a-z, 0-9
+  const slug = s => String(s || '').replace(/đ/gi, 'd').normalize('NFD').replace(/[^a-z0-9]/gi, '').toLowerCase();
+  const endpoint = () => 'https://script.google.com/macros/s/' + CONFIG.KHO[kho] + '/exec';
   const POLL_MS = 5000;      // hỏi Apps Script mỗi 5 giây (mỗi lượt ~1 giây; hỏi dày hơn không nhanh hơn mà dễ chạm giới hạn Apps Script)
   const SHOW = 30;           // số xe gần nhất hiển thị
   const MAX_SINGLE = 3;      // quá 3 xe mới cùng lúc → gộp 1 thông báo
@@ -174,7 +195,13 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
   const idOf = r => [r.ngay, r.gio, r.bienSo, r.taiXe].join('|');
   const tagsOf = r => [r.nhap, r.xuat].filter(Boolean);
 
-  let key = store.get('key', '');
+  // Kho đang theo dõi: ?kho=... trên link > kho chọn lần trước > kho đầu tiên
+  const khoParam = (location.search.match(/[?&]kho=([^&]+)/) || [])[1];
+  let kho = KHOS.find(k => khoParam && slug(k) === slug(decodeURIComponent(khoParam))) || store.get('kho', '');
+  if (!KHOS.includes(kho)) kho = KHOS[0];
+  // Bản cũ chỉ có 1 mã (của Sheet Sóng Thần) → chuyển sang mã riêng của kho Sóng Thần
+  if (store.get('key', '') && !store.get('key-Sóng Thần', '')){ store.set('key-Sóng Thần', store.get('key', '')); store.del('key'); }
+  let key = store.get('key-' + kho, '');
   let voiceOn = store.get('voice', '1') === '1';
   let viVoice = null;          // giọng tiếng Việt tốt nhất trên máy; null = không có
   let seen = null;             // Set id các xe đã thấy; null = chưa tải lần đầu (lần đầu không báo)
@@ -228,16 +255,17 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
   function notifyRows(rows){
     if (!rows.length) return;
     if (rows.length > MAX_SINGLE){
-      notify('🚚 ' + rows.length + ' xe mới đăng tài', rows.map(r => fmtPlate(r.bienSo) + ' · ' + r.loaiDon).join('\n'), 'nhieu-xe');
+      notify('🚚 ' + kho + ': ' + rows.length + ' xe mới đăng tài', rows.map(r => fmtPlate(r.bienSo) + ' · ' + r.loaiDon).join('\n'), 'nhieu-xe');
     } else {
-      rows.forEach(r => notify('🚚 ' + fmtPlate(r.bienSo) + ' · ' + r.nhaVanTai,
+      rows.forEach(r => notify('🚚 ' + kho + ' · ' + fmtPlate(r.bienSo) + ' · ' + r.nhaVanTai,
         r.loaiDon + (tagsOf(r).length ? ' · ' + tagsOf(r).join(' / ') : '') + '\n' + r.gio + ' · ' + r.taiXe, idOf(r)));
     }
     // Nhiều xe cùng lúc thì chỉ đọc số lượng
     say(rows.length > MAX_SINGLE ? 'Có ' + rows.length + ' xe mới đăng tài' : rows.map(speechOf).join('. '));
-    if (document.hidden){ unread += rows.length; document.title = '(' + unread + ') Theo dõi đăng tài – VTTC'; }
+    if (document.hidden){ unread += rows.length; document.title = '(' + unread + ') ' + baseTitle(); }
   }
-  document.addEventListener('visibilitychange', () => { if (!document.hidden){ unread = 0; document.title = 'Theo dõi đăng tài – VTTC'; } });
+  const baseTitle = () => 'Theo dõi ' + kho + ' – VTTC';
+  document.addEventListener('visibilitychange', () => { if (!document.hidden){ unread = 0; document.title = baseTitle(); } });
 
   // ===== Giao diện =====
   function setPill(state, text){ const p = $('#pill'); p.className = 'pill ' + state; $('#pillText').textContent = text; }
@@ -280,7 +308,7 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
     if (busy){ again = true; return; }
     busy = true; const g = gen;
     try {
-      const url = CONFIG.ENDPOINT + '?key=' + encodeURIComponent(key) + '&tab=' + encodeURIComponent(CONFIG.TAB) + '&n=' + SHOW + '&_=' + Date.now();
+      const url = endpoint() + '?key=' + encodeURIComponent(key) + '&tab=' + encodeURIComponent(CONFIG.TAB) + '&n=' + SHOW + '&_=' + Date.now();
       const res = await fetch(url, { cache: 'no-store' });
       const data = await res.json();
       if (g !== gen) return;
@@ -291,7 +319,9 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
         return;
       }
       sheetUrl = data.url; $('#sheetLink').href = data.url;
-      $('#source').textContent = 'Tab ' + data.tab + ' · ' + data.file;
+      // data.kho: kho mà Sheet tự khai (Code.gs). Lệch với kho đang chọn = Deployment ID trong CONFIG.KHO bị đặt nhầm.
+      $('#source').textContent = 'Kho ' + kho + ' · Tab ' + data.tab + ' · ' + data.file
+        + (data.kho && data.kho !== kho ? ' · ⚠ Sheet này khai là kho ' + data.kho : '');
       $('#setup').hidden = true; $('#bar').hidden = false;
       const fresh = new Set();
       if (seen === null){ seen = new Set(data.rows.map(idOf)); }
@@ -326,7 +356,7 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
   $('#setupForm').addEventListener('submit', async e => {
     e.preventDefault();
     key = $('#keyInput').value.trim(); if (!key) return;
-    store.set('key', key); seen = null; gen++;
+    store.set('key-' + kho, key); seen = null; gen++;
     if ('Notification' in window && Notification.permission === 'default') await Notification.requestPermission();
     showPerm(); showClickHint(); $('#setupMsg').textContent = ''; poll();
   });
@@ -337,10 +367,35 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
   });
   $('#testBtn').addEventListener('click', () => {
     const r = { bienSo: '51D11932', nhaVanTai: 'Châu Hà', loaiDon: 'Trả vỏ - lấy hàng NPP' };
-    notify('🚚 51D-119.32 · Châu Hà', 'Trả vỏ - lấy hàng NPP · RPM2 / X3\n14:35 · Nguyễn Văn An (thông báo thử)', 'thu');
+    notify('🚚 ' + kho + ' · 51D-119.32 · Châu Hà', 'Trả vỏ - lấy hàng NPP · RPM2 / X3\n14:35 · Nguyễn Văn An (thông báo thử)', 'thu');
     say(speechOf(r)); showPerm();
   });
-  $('#resetBtn').addEventListener('click', () => { store.del('key'); key = ''; seen = null; gen++; $('#setup').hidden = false; $('#bar').hidden = true; $('#list').innerHTML = ''; setPill('', 'Chưa bật'); $('#keyInput').focus(); });
+  $('#resetBtn').addEventListener('click', () => { store.del('key-' + kho); key = ''; seen = null; gen++; showSetup(); $('#keyInput').focus(); });
+
+  // ===== Chọn kho =====
+  // Mỗi kho một Sheet, một mã theo dõi. Đổi kho: bỏ lượt hỏi đang dở (gen++), lần tải đầu của kho mới không báo xe có sẵn.
+  function showSetup(){
+    $('#setup').hidden = false; $('#bar').hidden = true; $('#list').innerHTML = ''; $('#keyInput').value = ''; $('#setupMsg').textContent = '';
+    setPill('', 'Chưa bật'); $('#source').textContent = 'Kho ' + kho + ' · chưa kết nối';
+  }
+  function renderKho(){
+    $('#khoSeg').querySelectorAll('button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.kho === kho)));
+    $('#setupKho').textContent = kho; document.title = baseTitle();
+  }
+  KHOS.forEach(k => {
+    const b = el('button', '', k); b.type = 'button'; b.dataset.kho = k;
+    b.addEventListener('click', () => setKho(k));
+    $('#khoSeg').append(b);
+  });
+  function setKho(k){
+    if (k === kho) return;
+    kho = k; store.set('kho', k); key = store.get('key-' + k, ''); seen = null; gen++; sheetUrl = ''; unread = 0;
+    renderKho();
+    if (key){ $('#list').innerHTML = ''; $('#source').textContent = 'Kho ' + k + ' · đang kết nối…'; setPill('', 'Đang kết nối'); poll(); }
+    else showSetup();
+    showPerm(); showVoiceWarn(); showClickHint();
+  }
+  renderKho();
   // Trình duyệt chỉ cho đọc thành tiếng sau khi người dùng bấm vào trang ít nhất một lần (kể cả khi mở lại trang)
   function showClickHint(){
     const active = navigator.userActivation ? navigator.userActivation.hasBeenActive : true;
@@ -351,7 +406,7 @@ input:focus{outline:2px solid var(--brand);outline-offset:1px}
 
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(() => {});
   updateVoiceBtn();
-  if (!key){ $('#setup').hidden = false; } else { poll(); }
+  if (!key) showSetup(); else poll();
   showPerm(); showVoiceWarn(); showClickHint();
   startTimer();
 })();
