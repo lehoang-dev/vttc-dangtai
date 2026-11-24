@@ -7,14 +7,14 @@ Tài xế chọn kho (**Sóng Thần** hoặc **Cái Bè**) và điền phiếu 
 
 | Trang | Link | Dành cho |
 |---|---|---|
-| 📝 **Đăng ký (đăng tài)** | **https://lehoang-dev.github.io/vttc-dangtai/** | Tài xế (chọn kho Sóng Thần / Cái Bè trong form) |
-| 📡 **Theo dõi – kho Sóng Thần** | **https://lehoang-dev.github.io/vttc-dangtai/theo-doi/?kho=songthan** | Điều phối / bảo vệ cổng |
-| 📡 **Theo dõi – kho Cái Bè** | **https://lehoang-dev.github.io/vttc-dangtai/theo-doi/?kho=caibe** | Điều phối / bảo vệ cổng |
+| 📝 **Đăng ký (đăng tài)** | **https://vttc-dangtai-heineken.pages.dev/** | Tài xế (chọn kho Sóng Thần / Cái Bè trong form) |
+| 📡 **Theo dõi – kho Sóng Thần** | **https://vttc-dangtai-heineken.pages.dev/theo-doi/?kho=songthan** | Điều phối / bảo vệ cổng |
+| 📡 **Theo dõi – kho Cái Bè** | **https://vttc-dangtai-heineken.pages.dev/theo-doi/?kho=caibe** | Điều phối / bảo vệ cổng |
 
 Mở `theo-doi/` không kèm `?kho=` thì trang mở kho chọn lần trước (lần đầu là Sóng Thần); đổi kho ngay trên trang được.
 
 Link thử nghiệm (đọc tab `DangTai2`, không đụng dữ liệu thật): thêm `&tab=DangTai2`, ví dụ
-https://lehoang-dev.github.io/vttc-dangtai/theo-doi/?kho=songthan&tab=DangTai2
+https://vttc-dangtai-heineken.pages.dev/theo-doi/?kho=songthan&tab=DangTai2
 
 > Trang theo dõi cần **mã theo dõi riêng của từng kho** mới xem được dữ liệu. Mã không nằm trong code — xin mã từ người quản lý (xem mục *Tạo mã theo dõi* bên dưới).
 
@@ -69,5 +69,5 @@ Trong Apps Script của Sheet từng kho, chạy hàm `datMaTheoDoi` một lần
 
 ## Cập nhật web
 
-Web chạy trên GitHub Pages, push lên nhánh chính là tự cập nhật.
+Web chạy trên Cloudflare Pages (https://vttc-dangtai-heineken.pages.dev/), push lên nhánh chính là tự cập nhật.
 Sửa `truckin.css` / `truckin.js` thì đổi số `?v=` trong `index.html` để trình duyệt tải bản mới.
