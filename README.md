@@ -53,7 +53,7 @@ Mỗi kho một Google Sheet, **dùng chung một file `Code.gs`**. Làm các b�
    Đổi tên cột trong Sheet thì chỉ sửa ở `COL`.
 3. **Triển khai → Tùy chọn triển khai mới → Ứng dụng web**: *Thực thi với tư cách: Tôi*, *Ai có quyền truy cập: Bất kỳ ai*.
 4. Lấy **Deployment ID** (đoạn `AKfy…` trong URL `/exec`) dán vào `CONFIG.KHO` đúng tên kho trong `truckin.js` và `theo-doi/index.html`.
-   Mở URL `/exec` trên trình duyệt thấy `OK - DangTai endpoint đang chạy` là chạy đúng.
+   Mở URL `/exec` trên trình duyệt thấy `OK - DangTai endpoint đang chạy · kho: <tên kho>` là chạy đúng.
 
 ### Tạo mã theo dõi
 
