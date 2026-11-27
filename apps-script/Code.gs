@@ -62,7 +62,7 @@ function doPost(e) {
           + sh.getParent().getName() + '". Dòng 1 đang có: ' + JSON.stringify(head.filter(String)));
     });
 
-    const shift = shiftOf_(d.ngay, d.gioTruckIn);
+    const shift = shiftOf_(d.ngay, d.gioTruckIn, khoCuaSheet_());
     const tz = sh.getParent().getSpreadsheetTimeZone();
     const r = nextRow_(sh, C.bienSo);
     const put = (k, value, format) => {
@@ -165,14 +165,21 @@ function nextRow_(sh, keyCol) {
   return i + 2;
 }
 
-// Ca 1: 06:00–13:59 · Ca 2: 14:00–21:59 · Ca 3: 22:00–05:59
-// Ca 3 sau 0h vẫn tính vào ngày hôm trước
-function shiftOf_(ngay, gio) {
+// Sóng Thần — Ca 1: 06:00–13:59 · Ca 2: 14:00–21:59 · Ca 3: 22:00–05:59 (Ca 3 sau 0h vẫn tính vào ngày hôm trước)
+// Cái Bè — chỉ 2 ca, ngày theo ca bắt đầu lúc 22:00 (STT reset mỗi ngày lúc 22h, công thức STT2 đếm theo ngày):
+//   22:00–13:59 → Ca 1 (từ 22h trở đi tính sang ngày hôm sau) · 14:00–21:59 → Ca 2
+function shiftOf_(ngay, gio, kho) {
   const [y, m, dd] = ngay.split('-').map(Number);
   const h = Number(gio.split(':')[0]);
   const date = new Date(Date.UTC(y, m - 1, dd));
   let ca;
-  if (h >= 6 && h < 14) ca = 'Ca 1';
+  if (kho === 'Cái Bè') {
+    if (h >= 14 && h < 22) ca = 'Ca 2';
+    else {
+      ca = 'Ca 1';
+      if (h >= 22) date.setUTCDate(date.getUTCDate() + 1);
+    }
+  } else if (h >= 6 && h < 14) ca = 'Ca 1';
   else if (h >= 14 && h < 22) ca = 'Ca 2';
   else {
     ca = 'Ca 3';
@@ -191,7 +198,16 @@ function testShifts() {
   // STT2 do công thức ở A1 tự tính; script không ghi vào cột này (ghi vào sẽ làm cả cột #REF!)
   const sttCol = headers_(sh).indexOf('STT2') + 1;
   if (!sttCol) throw new Error('Không thấy cột "STT2" ở dòng 1. Nếu A1 đang #REF!: chọn A2 đến cuối cột, bấm Delete.');
-  const cases = [  // ngày gửi, giờ vào bãi → ca, ngày theo ca, STT mong đợi
+  const cases = khoCuaSheet_() === 'Cái Bè' ? [  // ngày gửi, giờ vào bãi → ca, ngày theo ca, STT mong đợi (STT đếm theo ngày)
+    ['2000-01-04', '22:00', 'Ca 1', '2000-01-05', 1], // từ 22h → ca 1 ngày hôm sau, STT về 1
+    ['2000-01-05', '00:30', 'Ca 1', '2000-01-05', 2],
+    ['2000-01-05', '06:10', 'Ca 1', '2000-01-05', 3],
+    ['2000-01-05', '13:59', 'Ca 1', '2000-01-05', 4],
+    ['2000-01-05', '14:00', 'Ca 2', '2000-01-05', 5], // sang ca 2 nhưng cùng ngày → STT chạy tiếp
+    ['2000-01-05', '21:59', 'Ca 2', '2000-01-05', 6],
+    ['2000-01-05', '22:00', 'Ca 1', '2000-01-06', 1], // 22h → reset, ngày mới
+    ['2000-01-06', '07:00', 'Ca 1', '2000-01-06', 2]
+  ] : [
     ['2000-01-05', '06:10', 'Ca 1', '2000-01-05', 1],
     ['2000-01-05', '13:59', 'Ca 1', '2000-01-05', 2],
     ['2000-01-05', '14:00', 'Ca 2', '2000-01-05', 1], // đủ 8 tiếng → đổi ca, STT về 1
